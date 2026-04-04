@@ -2,4 +2,6 @@ node_modules/
 dist/
 audio/
 *.db
+*.db-shm
+*.db-wal
 .env
