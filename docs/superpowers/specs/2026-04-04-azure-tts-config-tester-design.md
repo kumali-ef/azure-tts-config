@@ -88,17 +88,17 @@ Single page, two-panel layout:
 - List of saved recordings from the backend, sorted by newest first
 - Each entry displays: voice name, text snippet, params summary, timestamp
 - Click entry to play its saved audio
-- Delete button per entry
+- Action buttons per entry:
+  - **[Code]**: Opens ShowCodeModal with that recording's config values (converted from Recording to TtsConfig)
+  - **[Delete]**: Delete recording
 
 ### Show Code Modal
 
 - Triggered by `[Show Code]` button
-- Two tabs: **Python SDK** | **Node.js SDK**
-- Code block dynamically generated from current config including:
-  - Language and voice name
-  - All SSML parameters (rate, pitch, volume, emphasis, style, style degree, role, break)
-  - Complete, copy-paste-ready code snippet
-- SSML preview tab showing the raw generated SSML
+- Four tabs: **Python SDK** | **Node.js SDK** | **SSML** | **JSON**
+  - **Python SDK** and **Node.js SDK**: Code block dynamically generated from current config including language, voice name, and all SSML parameters (rate, pitch, volume, emphasis, style, style degree, role, break); complete, copy-paste-ready code snippet
+  - **SSML**: Raw generated SSML preview
+  - **JSON**: JSON object of all config parameters (excluding API key and region); empty optional fields are omitted
 - **Copy to clipboard** button per tab
 
 ## Data Model (SQLite)
@@ -183,7 +183,7 @@ Elements are conditionally included only when their values differ from defaults.
 | No Azure key/region set               | Disable Synthesize button, show prompt to configure         |
 | Invalid Azure key                     | Show error toast with API response message                  |
 | Voice list fetch fails                | Show error message with retry button                        |
-| Voice doesn't support style/role      | Hide style/role controls dynamically                        |
+| Voice doesn't support style/role      | Show disabled controls with hint message                    |
 | Synthesis fails (network/API error)   | Show error toast with Azure error message                   |
 | Empty text input                      | Disable Synthesize button                                   |
 | Backend unreachable                   | Recordings panel shows error; synthesize still works        |
