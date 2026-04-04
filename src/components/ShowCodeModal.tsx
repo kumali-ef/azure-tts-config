@@ -8,10 +8,10 @@ interface ShowCodeModalProps {
   onClose: () => void;
 }
 
-type Tab = 'python' | 'nodejs' | 'ssml' | 'json';
+type Tab = 'json' | 'python' | 'nodejs' | 'ssml';
 
 export function ShowCodeModal({ config, onClose }: ShowCodeModalProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('python');
+  const [activeTab, setActiveTab] = useState<Tab>('json');
   const [copied, setCopied] = useState(false);
 
   const codeMap: Record<Tab, string> = {
@@ -42,10 +42,10 @@ export function ShowCodeModal({ config, onClose }: ShowCodeModalProps) {
   };
 
   const tabs: { key: Tab; label: string }[] = [
+    { key: 'json', label: 'JSON' },
     { key: 'python', label: 'Python SDK' },
     { key: 'nodejs', label: 'Node.js SDK' },
     { key: 'ssml', label: 'SSML' },
-    { key: 'json', label: 'JSON' },
   ];
 
   return (

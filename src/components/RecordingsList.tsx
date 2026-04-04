@@ -62,22 +62,22 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDelete, o
                   ▶ Play
                 </button>
                 <button
+                  onClick={() => onDelete(rec.id)}
+                  className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition-colors"
+                >
+                  Delete
+                </button>
+                <button
                   onClick={() => onLoad(rec)}
                   className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition-colors"
                 >
-                  Load
+                  Load config
                 </button>
                 <button
                   onClick={() => onShowCode(rec)}
                   className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors"
                 >
                   Code
-                </button>
-                <button
-                  onClick={() => onDelete(rec.id)}
-                  className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition-colors"
-                >
-                  Delete
                 </button>
               </div>
             </div>
