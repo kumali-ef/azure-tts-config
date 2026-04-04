@@ -1,8 +1,220 @@
+import { useState, useRef, useCallback } from 'react';
+import { TtsConfig, AzureVoice, DEFAULT_CONFIG } from './types';
+import { useAzureSettings } from './hooks/useAzureSettings';
+import { useVoices } from './hooks/useVoices';
+import { useRecordings } from './hooks/useRecordings';
+import { buildSsml } from './utils/ssml';
+import { synthesizeSpeech } from './utils/azure-tts';
+import { AzureSettings } from './components/AzureSettings';
+import { VoiceSelector } from './components/VoiceSelector';
+import { ProsodyControls } from './components/ProsodyControls';
+import { EmphasisControl } from './components/EmphasisControl';
+import { StyleRoleControls } from './components/StyleRoleControls';
+import { BreakControl } from './components/BreakControl';
+import { TextInput } from './components/TextInput';
+import { ActionButtons } from './components/ActionButtons';
+import { ShowCodeModal } from './components/ShowCodeModal';
+import { RecordingsList } from './components/RecordingsList';
+
 function App() {
+  const { key, setKey, region, setRegion, isConfigured } = useAzureSettings();
+  const {
+    voices, languages, loading: voicesLoading, error: voicesError,
+    searchQuery, setSearchQuery, languageFilter, setLanguageFilter, retry,
+  } = useVoices(key, region);
+  const { recordings, loading: recsLoading, error: recsError, saveRecording, deleteRecording } = useRecordings();
+
+  const [config, setConfig] = useState<TtsConfig>(DEFAULT_CONFIG);
+  const [selectedVoice, setSelectedVoice] = useState<AzureVoice | null>(null);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastAudioBlob, setLastAudioBlob] = useState<Blob | null>(null);
+
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const updateConfig = useCallback((updates: Partial<TtsConfig>) => {
+    setConfig((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleVoiceSelect = (voice: AzureVoice | null) => {
+    setSelectedVoice(voice);
+    if (voice) {
+      updateConfig({
+        voiceName: voice.ShortName,
+        voiceDisplayName: voice.DisplayName,
+        language: voice.Locale,
+        style: '',
+        styleDegree: 1.0,
+        role: '',
+      });
+    }
+  };
+
+  const handleSynthesize = async () => {
+    if (!isConfigured || !config.voiceName || !config.text) return;
+    setIsSynthesizing(true);
+    setError(null);
+    try {
+      const ssml = buildSsml(config);
+      const audioBuffer = await synthesizeSpeech(key, region, ssml);
+      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+      setLastAudioBlob(blob);
+      const url = URL.createObjectURL(blob);
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.play();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Synthesis failed');
+    } finally {
+      setIsSynthesizing(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!lastAudioBlob) return;
+    try {
+      const ssml = buildSsml(config);
+      await saveRecording(lastAudioBlob, {
+        voice_name: config.voiceName,
+        voice_display_name: config.voiceDisplayName,
+        language: config.language,
+        text: config.text,
+        rate: config.rate,
+        pitch: config.pitch,
+        volume: config.volume,
+        emphasis: config.emphasis || null,
+        style: config.style || null,
+        style_degree: config.style ? config.styleDegree : null,
+        role: config.role || null,
+        break_config: config.breakValue
+          ? JSON.stringify({ type: config.breakType, value: config.breakValue })
+          : null,
+        ssml,
+      });
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save recording');
+    }
+  };
+
+  const handlePlayRecording = (id: string) => {
+    if (audioRef.current) {
+      audioRef.current.src = `/api/recordings/${id}/audio`;
+      audioRef.current.play();
+    }
+  };
+
+  const canSynthesize = isConfigured && !!config.voiceName && !!config.text;
+  const canSave = !!lastAudioBlob;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <h1 className="text-2xl font-bold text-gray-800">Azure TTS Config Tester</h1>
-      <p className="text-gray-600 mt-2">App shell ready.</p>
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-white shadow-sm border-b px-6 py-3">
+        <h1 className="text-xl font-bold text-gray-800">Azure TTS Config Tester</h1>
+      </header>
+
+      <div className="flex h-[calc(100vh-52px)]">
+        {/* Left Panel - Configuration */}
+        <div className="w-1/2 overflow-y-auto p-4 space-y-3 border-r">
+          <AzureSettings
+            apiKey={key}
+            region={region}
+            onKeyChange={setKey}
+            onRegionChange={setRegion}
+          />
+
+          <VoiceSelector
+            voices={voices}
+            languages={languages}
+            selectedVoice={config.voiceName}
+            searchQuery={searchQuery}
+            languageFilter={languageFilter}
+            loading={voicesLoading}
+            error={voicesError}
+            onVoiceChange={handleVoiceSelect}
+            onSearchChange={setSearchQuery}
+            onLanguageChange={setLanguageFilter}
+            onRetry={retry}
+          />
+
+          <ProsodyControls
+            rate={config.rate}
+            pitch={config.pitch}
+            volume={config.volume}
+            onRateChange={(rate) => updateConfig({ rate })}
+            onPitchChange={(pitch) => updateConfig({ pitch })}
+            onVolumeChange={(volume) => updateConfig({ volume })}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <EmphasisControl
+              emphasis={config.emphasis}
+              onChange={(emphasis) => updateConfig({ emphasis })}
+            />
+            <BreakControl
+              breakType={config.breakType}
+              breakValue={config.breakValue}
+              onBreakTypeChange={(breakType) => updateConfig({ breakType })}
+              onBreakValueChange={(breakValue) => updateConfig({ breakValue })}
+            />
+          </div>
+
+          <StyleRoleControls
+            styles={selectedVoice?.StyleList || []}
+            roles={selectedVoice?.RolePlayList || []}
+            style={config.style}
+            styleDegree={config.styleDegree}
+            role={config.role}
+            onStyleChange={(style) => updateConfig({ style })}
+            onStyleDegreeChange={(styleDegree) => updateConfig({ styleDegree })}
+            onRoleChange={(role) => updateConfig({ role })}
+          />
+
+          <TextInput text={config.text} onChange={(text) => updateConfig({ text })} />
+
+          <ActionButtons
+            canSynthesize={canSynthesize}
+            canSave={canSave}
+            isSynthesizing={isSynthesizing}
+            onSynthesize={handleSynthesize}
+            onSave={handleSave}
+            onShowCode={() => setShowCodeModal(true)}
+          />
+
+          {error && (
+            <div className="mx-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+              {error}
+            </div>
+          )}
+
+          {!isConfigured && (
+            <div className="mx-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-md text-sm">
+              Enter your Azure API key and region to get started.
+            </div>
+          )}
+        </div>
+
+        {/* Right Panel - Saved Recordings */}
+        <div className="w-1/2 overflow-y-auto bg-gray-50">
+          <RecordingsList
+            recordings={recordings}
+            loading={recsLoading}
+            error={recsError}
+            onPlay={handlePlayRecording}
+            onDelete={deleteRecording}
+          />
+        </div>
+      </div>
+
+      {/* Hidden audio element for playback */}
+      <audio ref={audioRef} />
+
+      {/* Show Code Modal */}
+      {showCodeModal && (
+        <ShowCodeModal config={config} onClose={() => setShowCodeModal(false)} />
+      )}
     </div>
   );
 }
