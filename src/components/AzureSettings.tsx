@@ -9,7 +9,7 @@ const REGIONS = [
   'eastus', 'eastus2', 'westus', 'westus2', 'westus3',
   'centralus', 'northcentralus', 'southcentralus',
   'westeurope', 'northeurope', 'uksouth',
-  'southeastasia', 'eastasia', 'japaneast', 'japanwest',
+  'southeastasia', 'swedencentral', 'eastasia', 'japaneast', 'japanwest',
   'australiaeast', 'canadacentral', 'brazilsouth',
   'koreacentral', 'centralindia', 'francecentral',
 ];
