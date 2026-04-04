@@ -1,4 +1,21 @@
+import { useState, useMemo } from 'react';
 import type { Recording } from '../types';
+
+interface RecordingFilters {
+  language: string;
+  voice: string;
+  rate: string;
+  pitch: string;
+  volume: string;
+  style: string;
+  emphasis: string;
+  role: string;
+}
+
+const EMPTY_FILTERS: RecordingFilters = {
+  language: '', voice: '', rate: '', pitch: '', volume: '',
+  style: '', emphasis: '', role: '',
+};
 
 interface RecordingsListProps {
   recordings: Recording[];
@@ -11,11 +28,86 @@ interface RecordingsListProps {
 }
 
 export function RecordingsList({ recordings, loading, error, onPlay, onDelete, onShowCode, onLoad }: RecordingsListProps) {
+  const [filters, setFilters] = useState<RecordingFilters>(EMPTY_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const filterOptions = useMemo(() => {
+    const collect = (fn: (r: Recording) => string | null) => {
+      const vals = new Set<string>();
+      for (const r of recordings) {
+        const v = fn(r);
+        if (v) vals.add(v);
+      }
+      return [...vals].sort();
+    };
+    return {
+      languages: collect((r) => r.language),
+      voices: collect((r) => r.voice_display_name),
+      rates: collect((r) => r.rate),
+      pitches: collect((r) => r.pitch),
+      volumes: collect((r) => r.volume),
+      styles: collect((r) => r.style),
+      emphases: collect((r) => r.emphasis),
+      roles: collect((r) => r.role),
+    };
+  }, [recordings]);
+
+  const filtered = useMemo(() => {
+    return recordings.filter((r) => {
+      if (filters.language && r.language !== filters.language) return false;
+      if (filters.voice && r.voice_display_name !== filters.voice) return false;
+      if (filters.rate && r.rate !== filters.rate) return false;
+      if (filters.pitch && r.pitch !== filters.pitch) return false;
+      if (filters.volume && r.volume !== filters.volume) return false;
+      if (filters.style && (r.style || '') !== filters.style) return false;
+      if (filters.emphasis && (r.emphasis || '') !== filters.emphasis) return false;
+      if (filters.role && (r.role || '') !== filters.role) return false;
+      return true;
+    });
+  }, [recordings, filters]);
+
+  const activeCount = Object.values(filters).filter(Boolean).length;
+
+  const updateFilter = (key: keyof RecordingFilters, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide p-4 pb-2">
-        Saved Recordings ({recordings.length})
-      </h2>
+      <div className="flex items-center justify-between p-4 pb-2">
+        <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+          Saved Recordings ({filtered.length}{filtered.length !== recordings.length ? ` / ${recordings.length}` : ''})
+        </h2>
+        <div className="flex items-center gap-2">
+          {activeCount > 0 && (
+            <button
+              onClick={() => setFilters(EMPTY_FILTERS)}
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              Clear
+            </button>
+          )}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`text-xs px-2 py-1 rounded transition-colors ${showFilters ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            Filter{activeCount > 0 ? ` (${activeCount})` : ''}
+          </button>
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="mx-4 mb-2 p-3 bg-white border rounded-lg grid grid-cols-2 gap-2">
+          <FilterSelect label="Language" value={filters.language} options={filterOptions.languages} onChange={(v) => updateFilter('language', v)} />
+          <FilterSelect label="Voice" value={filters.voice} options={filterOptions.voices} onChange={(v) => updateFilter('voice', v)} />
+          <FilterSelect label="Rate" value={filters.rate} options={filterOptions.rates} onChange={(v) => updateFilter('rate', v)} />
+          <FilterSelect label="Pitch" value={filters.pitch} options={filterOptions.pitches} onChange={(v) => updateFilter('pitch', v)} />
+          <FilterSelect label="Volume" value={filters.volume} options={filterOptions.volumes} onChange={(v) => updateFilter('volume', v)} />
+          <FilterSelect label="Style" value={filters.style} options={filterOptions.styles} onChange={(v) => updateFilter('style', v)} />
+          <FilterSelect label="Emphasis" value={filters.emphasis} options={filterOptions.emphases} onChange={(v) => updateFilter('emphasis', v)} />
+          <FilterSelect label="Role" value={filters.role} options={filterOptions.roles} onChange={(v) => updateFilter('role', v)} />
+        </div>
+      )}
 
       {error && (
         <div className="mx-4 p-2 bg-red-50 text-red-600 rounded text-sm">{error}</div>
@@ -26,11 +118,13 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDelete, o
       )}
 
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
-        {recordings.length === 0 && !loading && (
-          <p className="text-gray-400 text-sm italic">No saved recordings yet.</p>
+        {filtered.length === 0 && !loading && (
+          <p className="text-gray-400 text-sm italic">
+            {recordings.length === 0 ? 'No saved recordings yet.' : 'No recordings match the filters.'}
+          </p>
         )}
 
-        {recordings.map((rec) => (
+        {filtered.map((rec) => (
           <div key={rec.id} className="p-3 bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
@@ -93,5 +187,29 @@ function Tag({ label }: { label: string }) {
     <span className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
       {label}
     </span>
+  );
+}
+
+function FilterSelect({ label, value, options, onChange }: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  if (options.length === 0) return null;
+  return (
+    <div>
+      <label className="text-xs text-gray-500">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-2 py-1 border rounded text-xs focus:ring-1 focus:ring-blue-500"
+      >
+        <option value="">All ({options.length})</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    </div>
   );
 }
