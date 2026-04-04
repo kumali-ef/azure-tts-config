@@ -30,14 +30,14 @@ export function VoiceSelector({
     return counts;
   }, [allVoices]);
 
-  const langsWithStyleOrRole = useMemo(() => {
-    const result = new Set<string>();
+  const langStyleRoleInfo = useMemo(() => {
+    const hasStyle = new Set<string>();
+    const hasRole = new Set<string>();
     for (const v of allVoices) {
-      if ((v.StyleList && v.StyleList.length > 0) || (v.RolePlayList && v.RolePlayList.length > 0)) {
-        result.add(v.Locale);
-      }
+      if (v.StyleList && v.StyleList.length > 0) hasStyle.add(v.Locale);
+      if (v.RolePlayList && v.RolePlayList.length > 0) hasRole.add(v.Locale);
     }
-    return result;
+    return { hasStyle, hasRole };
   }, [allVoices]);
 
   const filteredLanguages = useMemo(() => {
@@ -75,7 +75,12 @@ export function VoiceSelector({
           >
             <option value="">All ({languages.length})</option>
             {filteredLanguages.map((lang) => {
-              const suffix = langsWithStyleOrRole.has(lang) ? ' - with style|role' : '';
+              const s = langStyleRoleInfo.hasStyle.has(lang);
+              const r = langStyleRoleInfo.hasRole.has(lang);
+              const suffix = s && r ? ' - with style|role'
+                : s ? ' - with style'
+                : r ? ' - with role'
+                : '';
               return (
                 <option key={lang} value={lang}>{lang} ({voiceCountByLang.get(lang) || 0}){suffix}</option>
               );
