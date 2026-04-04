@@ -16,8 +16,7 @@ export function StyleRoleControls({
   if (styles.length === 0 && roles.length === 0) return null;
 
   return (
-    <div className="space-y-3 p-4 bg-white rounded-lg shadow-sm border">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Style & Role</h2>
+    <div className="space-y-3 p-4">
       {styles.length > 0 && (
         <>
           <div>

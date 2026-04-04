@@ -6,6 +6,7 @@ import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';
 import { buildSsml } from './utils/ssml';
 import { synthesizeSpeech } from './utils/azure-tts';
+import { Accordion } from './components/Accordion';
 import { AzureSettings } from './components/AzureSettings';
 import { VoiceSelector } from './components/VoiceSelector';
 import { ProsodyControls } from './components/ProsodyControls';
@@ -134,62 +135,76 @@ function App() {
       <div className="flex h-[calc(100vh-52px)]">
         {/* Left Panel - Configuration */}
         <div className="w-1/2 overflow-y-auto p-4 space-y-3 border-r">
-          <AzureSettings
-            apiKey={key}
-            region={region}
-            onKeyChange={setKey}
-            onRegionChange={setRegion}
-          />
-
-          <VoiceSelector
-            voices={voices}
-            allVoices={allVoices}
-            languages={languages}
-            selectedVoice={config.voiceName}
-            searchQuery={searchQuery}
-            languageFilter={languageFilter}
-            loading={voicesLoading}
-            error={voicesError}
-            onVoiceChange={handleVoiceSelect}
-            onSearchChange={setSearchQuery}
-            onLanguageChange={setLanguageFilter}
-            onRetry={retry}
-          />
-
-          <ProsodyControls
-            rate={config.rate}
-            pitch={config.pitch}
-            volume={config.volume}
-            onRateChange={(rate) => updateConfig({ rate })}
-            onPitchChange={(pitch) => updateConfig({ pitch })}
-            onVolumeChange={(volume) => updateConfig({ volume })}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <EmphasisControl
-              emphasis={config.emphasis}
-              onChange={(emphasis) => updateConfig({ emphasis })}
+          <Accordion title="Azure Settings">
+            <AzureSettings
+              apiKey={key}
+              region={region}
+              onKeyChange={setKey}
+              onRegionChange={setRegion}
             />
-            <BreakControl
-              breakType={config.breakType}
-              breakValue={config.breakValue}
-              onBreakTypeChange={(breakType) => updateConfig({ breakType })}
-              onBreakValueChange={(breakValue) => updateConfig({ breakValue })}
+          </Accordion>
+
+          <Accordion title="Language & Voice">
+            <VoiceSelector
+              voices={voices}
+              allVoices={allVoices}
+              languages={languages}
+              selectedVoice={config.voiceName}
+              searchQuery={searchQuery}
+              languageFilter={languageFilter}
+              loading={voicesLoading}
+              error={voicesError}
+              onVoiceChange={handleVoiceSelect}
+              onSearchChange={setSearchQuery}
+              onLanguageChange={setLanguageFilter}
+              onRetry={retry}
             />
-          </div>
+          </Accordion>
 
-          <StyleRoleControls
-            styles={selectedVoice?.StyleList || []}
-            roles={selectedVoice?.RolePlayList || []}
-            style={config.style}
-            styleDegree={config.styleDegree}
-            role={config.role}
-            onStyleChange={(style) => updateConfig({ style })}
-            onStyleDegreeChange={(styleDegree) => updateConfig({ styleDegree })}
-            onRoleChange={(role) => updateConfig({ role })}
-          />
+          <Accordion title="Prosody">
+            <ProsodyControls
+              rate={config.rate}
+              pitch={config.pitch}
+              volume={config.volume}
+              onRateChange={(rate) => updateConfig({ rate })}
+              onPitchChange={(pitch) => updateConfig({ pitch })}
+              onVolumeChange={(volume) => updateConfig({ volume })}
+            />
+          </Accordion>
 
-          <TextInput text={config.text} onChange={(text) => updateConfig({ text })} />
+          <Accordion title="Emphasis & Break">
+            <div className="grid grid-cols-2 gap-3 p-4">
+              <EmphasisControl
+                emphasis={config.emphasis}
+                onChange={(emphasis) => updateConfig({ emphasis })}
+              />
+              <BreakControl
+                breakType={config.breakType}
+                breakValue={config.breakValue}
+                onBreakTypeChange={(breakType) => updateConfig({ breakType })}
+                onBreakValueChange={(breakValue) => updateConfig({ breakValue })}
+              />
+            </div>
+          </Accordion>
+
+          {(selectedVoice?.StyleList?.length || selectedVoice?.RolePlayList?.length) ? (
+            <Accordion title="Style & Role">
+              <StyleRoleControls
+                styles={selectedVoice?.StyleList || []}
+                roles={selectedVoice?.RolePlayList || []}
+                style={config.style}
+                styleDegree={config.styleDegree}
+                role={config.role}
+                onStyleChange={(style) => updateConfig({ style })}
+                onStyleDegreeChange={(styleDegree) => updateConfig({ styleDegree })}
+                onRoleChange={(role) => updateConfig({ role })}
+              />
+            </Accordion>
+          ) : null}
+
+          <Accordion title="Text">
+            <TextInput text={config.text} onChange={(text) => updateConfig({ text })} />
+          </Accordion>
 
           <ActionButtons
             canSynthesize={canSynthesize}

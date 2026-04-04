@@ -16,8 +16,7 @@ const REGIONS = [
 
 export function AzureSettings({ apiKey, region, onKeyChange, onRegionChange }: AzureSettingsProps) {
   return (
-    <div className="space-y-3 p-4 bg-white rounded-lg shadow-sm border">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Azure Settings</h2>
+    <div className="space-y-3 p-4">
       <div>
         <label className="block text-sm font-medium text-gray-600 mb-1">API Key</label>
         <input

@@ -78,8 +78,7 @@ export function VoiceSelector({
   }, [filteredAllVoices]);
 
   return (
-    <div className="space-y-3 p-4 bg-white rounded-lg shadow-sm border">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Language & Voice</h2>
+    <div className="space-y-3 p-4">
       {error && (
         <div className="flex items-center gap-2 text-red-600 text-sm">
           <span>{error}</span>

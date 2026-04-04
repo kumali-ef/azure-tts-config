@@ -15,8 +15,7 @@ export function ProsodyControls({
   rate, pitch, volume, onRateChange, onPitchChange, onVolumeChange,
 }: ProsodyControlsProps) {
   return (
-    <div className="space-y-3 p-4 bg-white rounded-lg shadow-sm border">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Prosody</h2>
+    <div className="space-y-3 p-4">
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-600 mb-1">Rate</label>

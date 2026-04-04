@@ -9,8 +9,7 @@ const STRENGTH_OPTIONS = ['', 'none', 'x-weak', 'weak', 'medium', 'strong', 'x-s
 
 export function BreakControl({ breakType, breakValue, onBreakTypeChange, onBreakValueChange }: BreakControlProps) {
   return (
-    <div className="space-y-3 p-4 bg-white rounded-lg shadow-sm border">
-      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Break (Pause)</h2>
+    <div className="space-y-3">
       <div className="flex gap-3">
         <label className="flex items-center gap-1 text-sm">
           <input type="radio" checked={breakType === 'strength'}
