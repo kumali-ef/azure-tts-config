@@ -30,6 +30,16 @@ export function VoiceSelector({
     return counts;
   }, [allVoices]);
 
+  const langsWithStyleOrRole = useMemo(() => {
+    const result = new Set<string>();
+    for (const v of allVoices) {
+      if ((v.StyleList && v.StyleList.length > 0) || (v.RolePlayList && v.RolePlayList.length > 0)) {
+        result.add(v.Locale);
+      }
+    }
+    return result;
+  }, [allVoices]);
+
   const filteredLanguages = useMemo(() => {
     if (!langSearch) return languages;
     return languages.filter((lang) =>
@@ -64,9 +74,12 @@ export function VoiceSelector({
             size={10}
           >
             <option value="">All ({languages.length})</option>
-            {filteredLanguages.map((lang) => (
-              <option key={lang} value={lang}>{lang} ({voiceCountByLang.get(lang) || 0})</option>
-            ))}
+            {filteredLanguages.map((lang) => {
+              const suffix = langsWithStyleOrRole.has(lang) ? ' - with style|role' : '';
+              return (
+                <option key={lang} value={lang}>{lang} ({voiceCountByLang.get(lang) || 0}){suffix}</option>
+              );
+            })}
           </select>
           <p className="text-xs text-gray-500">
             {filteredLanguages.length} language{filteredLanguages.length !== 1 ? 's' : ''}
@@ -94,11 +107,19 @@ export function VoiceSelector({
           >
             {loading && <option>Loading voices...</option>}
             {!loading && voices.length === 0 && <option>No voices available</option>}
-            {voices.map((voice) => (
-              <option key={voice.ShortName} value={voice.ShortName}>
-                {voice.DisplayName} ({voice.Locale}) - {voice.Gender}
-              </option>
-            ))}
+            {voices.map((voice) => {
+              const hasStyle = voice.StyleList && voice.StyleList.length > 0;
+              const hasRole = voice.RolePlayList && voice.RolePlayList.length > 0;
+              const suffix = hasStyle && hasRole ? ' - with style|role'
+                : hasStyle ? ' - with style'
+                : hasRole ? ' - with role'
+                : '';
+              return (
+                <option key={voice.ShortName} value={voice.ShortName}>
+                  {voice.DisplayName} ({voice.Locale}) - {voice.Gender}{suffix}
+                </option>
+              );
+            })}
           </select>
           <p className="text-xs text-gray-500">
             {voices.length} voice{voices.length !== 1 ? 's' : ''}
