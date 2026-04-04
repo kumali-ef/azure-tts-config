@@ -1,0 +1,72 @@
+import { AzureVoice } from '../types';
+
+interface VoiceSelectorProps {
+  voices: AzureVoice[];
+  languages: string[];
+  selectedVoice: string;
+  searchQuery: string;
+  languageFilter: string;
+  loading: boolean;
+  error: string | null;
+  onVoiceChange: (voice: AzureVoice | null) => void;
+  onSearchChange: (query: string) => void;
+  onLanguageChange: (language: string) => void;
+  onRetry: () => void;
+}
+
+export function VoiceSelector({
+  voices, languages, selectedVoice, searchQuery, languageFilter,
+  loading, error, onVoiceChange, onSearchChange, onLanguageChange, onRetry,
+}: VoiceSelectorProps) {
+  return (
+    <div className="space-y-3 p-4 bg-white rounded-lg shadow-sm border">
+      <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Voice</h2>
+      {error && (
+        <div className="flex items-center gap-2 text-red-600 text-sm">
+          <span>{error}</span>
+          <button onClick={onRetry} className="underline hover:no-underline">Retry</button>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search voices..."
+          className="flex-1 px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+        />
+        <select
+          value={languageFilter}
+          onChange={(e) => onLanguageChange(e.target.value)}
+          className="px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All languages</option>
+          {languages.map((lang) => (
+            <option key={lang} value={lang}>{lang}</option>
+          ))}
+        </select>
+      </div>
+      <select
+        value={selectedVoice}
+        onChange={(e) => {
+          const voice = voices.find((v) => v.ShortName === e.target.value) || null;
+          onVoiceChange(voice);
+        }}
+        disabled={loading || voices.length === 0}
+        className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+        size={8}
+      >
+        {loading && <option>Loading voices...</option>}
+        {!loading && voices.length === 0 && <option>No voices available</option>}
+        {voices.map((voice) => (
+          <option key={voice.ShortName} value={voice.ShortName}>
+            {voice.DisplayName} ({voice.Locale}) - {voice.Gender}
+          </option>
+        ))}
+      </select>
+      <p className="text-xs text-gray-500">
+        {voices.length} voice{voices.length !== 1 ? 's' : ''} available
+      </p>
+    </div>
+  );
+}
