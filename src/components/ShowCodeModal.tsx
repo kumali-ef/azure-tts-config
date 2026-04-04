@@ -8,7 +8,7 @@ interface ShowCodeModalProps {
   onClose: () => void;
 }
 
-type Tab = 'python' | 'nodejs' | 'ssml';
+type Tab = 'python' | 'nodejs' | 'ssml' | 'json';
 
 export function ShowCodeModal({ config, onClose }: ShowCodeModalProps) {
   const [activeTab, setActiveTab] = useState<Tab>('python');
@@ -18,6 +18,21 @@ export function ShowCodeModal({ config, onClose }: ShowCodeModalProps) {
     python: generatePythonCode(config),
     nodejs: generateNodeCode(config),
     ssml: buildSsml(config),
+    json: JSON.stringify({
+      voiceName: config.voiceName,
+      voiceDisplayName: config.voiceDisplayName,
+      language: config.language,
+      text: config.text,
+      rate: config.rate,
+      pitch: config.pitch,
+      volume: config.volume,
+      emphasis: config.emphasis || undefined,
+      style: config.style || undefined,
+      styleDegree: config.style ? config.styleDegree : undefined,
+      role: config.role || undefined,
+      breakType: config.breakValue ? config.breakType : undefined,
+      breakValue: config.breakValue || undefined,
+    }, null, 2),
   };
 
   const handleCopy = async () => {
@@ -30,6 +45,7 @@ export function ShowCodeModal({ config, onClose }: ShowCodeModalProps) {
     { key: 'python', label: 'Python SDK' },
     { key: 'nodejs', label: 'Node.js SDK' },
     { key: 'ssml', label: 'SSML' },
+    { key: 'json', label: 'JSON' },
   ];
 
   return (

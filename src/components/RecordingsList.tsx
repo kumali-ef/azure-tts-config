@@ -6,9 +6,10 @@ interface RecordingsListProps {
   error: string | null;
   onPlay: (id: string) => void;
   onDelete: (id: string) => void;
+  onShowCode: (recording: Recording) => void;
 }
 
-export function RecordingsList({ recordings, loading, error, onPlay, onDelete }: RecordingsListProps) {
+export function RecordingsList({ recordings, loading, error, onPlay, onDelete, onShowCode }: RecordingsListProps) {
   return (
     <div className="h-full flex flex-col">
       <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide p-4 pb-2">
@@ -58,6 +59,12 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDelete }:
                   className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
                 >
                   ▶ Play
+                </button>
+                <button
+                  onClick={() => onShowCode(rec)}
+                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors"
+                >
+                  Code
                 </button>
                 <button
                   onClick={() => onDelete(rec.id)}

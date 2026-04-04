@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import type { TtsConfig, AzureVoice } from './types';
+import type { TtsConfig, AzureVoice, Recording } from './types';
 import { DEFAULT_CONFIG } from './types';
 import { useAzureSettings } from './hooks/useAzureSettings';
 import { useVoices } from './hooks/useVoices';
@@ -17,6 +17,25 @@ import { ActionButtons } from './components/ActionButtons';
 import { ShowCodeModal } from './components/ShowCodeModal';
 import { RecordingsList } from './components/RecordingsList';
 
+function recordingToConfig(rec: Recording): TtsConfig {
+  const breakConfig = rec.break_config ? JSON.parse(rec.break_config) : null;
+  return {
+    voiceName: rec.voice_name,
+    voiceDisplayName: rec.voice_display_name,
+    language: rec.language,
+    text: rec.text,
+    rate: rec.rate,
+    pitch: rec.pitch,
+    volume: rec.volume,
+    emphasis: rec.emphasis || '',
+    style: rec.style || '',
+    styleDegree: rec.style_degree ?? 1.0,
+    role: rec.role || '',
+    breakType: breakConfig?.type || 'strength',
+    breakValue: breakConfig?.value || '',
+  };
+}
+
 function App() {
   const { key, setKey, region, setRegion, isConfigured } = useAzureSettings();
   const {
@@ -28,7 +47,7 @@ function App() {
   const [config, setConfig] = useState<TtsConfig>(DEFAULT_CONFIG);
   const [selectedVoice, setSelectedVoice] = useState<AzureVoice | null>(null);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
-  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [codeModalConfig, setCodeModalConfig] = useState<TtsConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastAudioBlob, setLastAudioBlob] = useState<Blob | null>(null);
 
@@ -181,7 +200,7 @@ function App() {
             isSynthesizing={isSynthesizing}
             onSynthesize={handleSynthesize}
             onSave={handleSave}
-            onShowCode={() => setShowCodeModal(true)}
+            onShowCode={() => setCodeModalConfig(config)}
           />
 
           {error && (
@@ -205,6 +224,7 @@ function App() {
             error={recsError}
             onPlay={handlePlayRecording}
             onDelete={deleteRecording}
+            onShowCode={(rec) => setCodeModalConfig(recordingToConfig(rec))}
           />
         </div>
       </div>
@@ -213,8 +233,8 @@ function App() {
       <audio ref={audioRef} />
 
       {/* Show Code Modal */}
-      {showCodeModal && (
-        <ShowCodeModal config={config} onClose={() => setShowCodeModal(false)} />
+      {codeModalConfig && (
+        <ShowCodeModal config={codeModalConfig} onClose={() => setCodeModalConfig(null)} />
       )}
     </div>
   );
