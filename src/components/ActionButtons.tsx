@@ -1,15 +1,13 @@
 interface ActionButtonsProps {
   canSynthesize: boolean;
-  canSave: boolean;
   isSynthesizing: boolean;
   onSynthesize: () => void;
-  onSave: () => void;
   onShowCode: () => void;
 }
 
 export function ActionButtons({
-  canSynthesize, canSave, isSynthesizing,
-  onSynthesize, onSave, onShowCode,
+  canSynthesize, isSynthesizing,
+  onSynthesize, onShowCode,
 }: ActionButtonsProps) {
   return (
     <div className="flex gap-2 p-4">
@@ -18,14 +16,7 @@ export function ActionButtons({
         disabled={!canSynthesize || isSynthesizing}
         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
       >
-        {isSynthesizing ? 'Synthesizing...' : 'Synthesize & Play'}
-      </button>
-      <button
-        onClick={onSave}
-        disabled={!canSave}
-        className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-      >
-        Save
+        {isSynthesizing ? 'Synthesizing...' : 'Synthesize & Play & Save'}
       </button>
       <button
         onClick={onShowCode}

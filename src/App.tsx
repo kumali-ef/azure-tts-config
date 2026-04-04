@@ -49,7 +49,6 @@ function App() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [codeModalConfig, setCodeModalConfig] = useState<TtsConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastAudioBlob, setLastAudioBlob] = useState<Blob | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -79,24 +78,13 @@ function App() {
       const ssml = buildSsml(config);
       const audioBuffer = await synthesizeSpeech(key, region, ssml);
       const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-      setLastAudioBlob(blob);
       const url = URL.createObjectURL(blob);
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.play();
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Synthesis failed');
-    } finally {
-      setIsSynthesizing(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!lastAudioBlob) return;
-    try {
-      const ssml = buildSsml(config);
-      await saveRecording(lastAudioBlob, {
+      // Auto-save after successful synthesis
+      await saveRecording(blob, {
         voice_name: config.voiceName,
         voice_display_name: config.voiceDisplayName,
         language: config.language,
@@ -113,9 +101,10 @@ function App() {
           : null,
         ssml,
       });
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save recording');
+      setError(err instanceof Error ? err.message : 'Synthesis failed');
+    } finally {
+      setIsSynthesizing(false);
     }
   };
 
@@ -127,7 +116,6 @@ function App() {
   };
 
   const canSynthesize = isConfigured && !!config.voiceName && !!config.text;
-  const canSave = !!lastAudioBlob;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -197,10 +185,8 @@ function App() {
 
           <ActionButtons
             canSynthesize={canSynthesize}
-            canSave={canSave}
             isSynthesizing={isSynthesizing}
             onSynthesize={handleSynthesize}
-            onSave={handleSave}
             onShowCode={() => setCodeModalConfig(config)}
           />
 
