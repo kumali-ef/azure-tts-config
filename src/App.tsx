@@ -39,7 +39,7 @@ function recordingToConfig(rec: Recording): TtsConfig {
 function App() {
   const { key, setKey, region, setRegion, isConfigured } = useAzureSettings();
   const {
-    voices, languages, loading: voicesLoading, error: voicesError,
+    voices, allVoices, languages, loading: voicesLoading, error: voicesError,
     searchQuery, setSearchQuery, languageFilter, setLanguageFilter, retry,
   } = useVoices(key, region);
   const { recordings, loading: recsLoading, error: recsError, saveRecording, deleteRecording } = useRecordings();
@@ -147,6 +147,7 @@ function App() {
 
           <VoiceSelector
             voices={voices}
+            allVoices={allVoices}
             languages={languages}
             selectedVoice={config.voiceName}
             searchQuery={searchQuery}

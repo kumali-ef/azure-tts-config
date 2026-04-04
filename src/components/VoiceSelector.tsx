@@ -3,6 +3,7 @@ import type { AzureVoice } from '../types';
 
 interface VoiceSelectorProps {
   voices: AzureVoice[];
+  allVoices: AzureVoice[];
   languages: string[];
   selectedVoice: string;
   searchQuery: string;
@@ -16,10 +17,18 @@ interface VoiceSelectorProps {
 }
 
 export function VoiceSelector({
-  voices, languages, selectedVoice, searchQuery, languageFilter,
+  voices, allVoices, languages, selectedVoice, searchQuery, languageFilter,
   loading, error, onVoiceChange, onSearchChange, onLanguageChange, onRetry,
 }: VoiceSelectorProps) {
   const [langSearch, setLangSearch] = useState('');
+
+  const voiceCountByLang = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const v of allVoices) {
+      counts.set(v.Locale, (counts.get(v.Locale) || 0) + 1);
+    }
+    return counts;
+  }, [allVoices]);
 
   const filteredLanguages = useMemo(() => {
     if (!langSearch) return languages;
@@ -56,7 +65,7 @@ export function VoiceSelector({
           >
             <option value="">All ({languages.length})</option>
             {filteredLanguages.map((lang) => (
-              <option key={lang} value={lang}>{lang}</option>
+              <option key={lang} value={lang}>{lang} ({voiceCountByLang.get(lang) || 0})</option>
             ))}
           </select>
           <p className="text-xs text-gray-500">
