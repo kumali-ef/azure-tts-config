@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Recording } from '../types';
+import type { Recording } from '../types';
 
 export function useRecordings() {
   const [recordings, setRecordings] = useState<Recording[]>([]);

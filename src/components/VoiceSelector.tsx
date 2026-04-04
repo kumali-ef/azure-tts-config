@@ -1,4 +1,4 @@
-import { AzureVoice } from '../types';
+import type { AzureVoice } from '../types';
 
 interface VoiceSelectorProps {
   voices: AzureVoice[];

@@ -1,4 +1,4 @@
-import { Recording } from '../types';
+import type { Recording } from '../types';
 
 interface RecordingsListProps {
   recordings: Recording[];

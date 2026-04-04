@@ -1,4 +1,4 @@
-import { TtsConfig } from '../types';
+import type { TtsConfig } from '../types';
 
 export function buildSsml(config: TtsConfig): string {
   const hasStyle = config.style !== '';

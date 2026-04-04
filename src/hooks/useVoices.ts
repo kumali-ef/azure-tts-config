@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { AzureVoice } from '../types';
+import type { AzureVoice } from '../types';
 import { fetchVoices } from '../utils/azure-tts';
 
 export function useVoices(key: string, region: string) {

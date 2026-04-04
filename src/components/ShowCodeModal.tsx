@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TtsConfig } from '../types';
+import type { TtsConfig } from '../types';
 import { generatePythonCode, generateNodeCode } from '../utils/code-generator';
 import { buildSsml } from '../utils/ssml';
 

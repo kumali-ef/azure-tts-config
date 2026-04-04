@@ -1,4 +1,4 @@
-import { TtsConfig } from '../types';
+import type { TtsConfig } from '../types';
 import { buildSsml } from './ssml';
 
 export function generatePythonCode(config: TtsConfig): string {

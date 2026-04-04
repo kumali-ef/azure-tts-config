@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
-import { TtsConfig, AzureVoice, DEFAULT_CONFIG } from './types';
+import type { TtsConfig, AzureVoice } from './types';
+import { DEFAULT_CONFIG } from './types';
 import { useAzureSettings } from './hooks/useAzureSettings';
 import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';

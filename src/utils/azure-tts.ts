@@ -1,4 +1,4 @@
-import { AzureVoice } from '../types';
+import type { AzureVoice } from '../types';
 
 export async function fetchVoices(key: string, region: string): Promise<AzureVoice[]> {
   const url = `https://${region}.tts.speech.microsoft.com/cognitiveservices/voices/list`;
