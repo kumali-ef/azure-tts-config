@@ -115,6 +115,14 @@ function App() {
     }
   };
 
+  const handleLoadRecording = (rec: Recording) => {
+    const newConfig = recordingToConfig(rec);
+    setConfig(newConfig);
+    setLanguageFilter(rec.language);
+    const voice = allVoices.find((v) => v.ShortName === rec.voice_name) || null;
+    if (voice) setSelectedVoice(voice);
+  };
+
   const canSynthesize = isConfigured && !!config.voiceName && !!config.text;
 
   return (
@@ -212,6 +220,7 @@ function App() {
             onPlay={handlePlayRecording}
             onDelete={deleteRecording}
             onShowCode={(rec) => setCodeModalConfig(recordingToConfig(rec))}
+            onLoad={handleLoadRecording}
           />
         </div>
       </div>
