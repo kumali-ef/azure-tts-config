@@ -183,7 +183,7 @@ Elements are conditionally included only when their values differ from defaults.
 | No Azure key/region set               | Disable Synthesize button, show prompt to configure         |
 | Invalid Azure key                     | Show error toast with API response message                  |
 | Voice list fetch fails                | Show error message with retry button                        |
-| Voice doesn't support style/role      | Show disabled controls with hint message                    |
+| Voice doesn't support style/role      | Hide style/role controls dynamically                        |
 | Synthesis fails (network/API error)   | Show error toast with Azure error message                   |
 | Empty text input                      | Disable Synthesize button                                   |
 | Backend unreachable                   | Recordings panel shows error; synthesize still works        |
