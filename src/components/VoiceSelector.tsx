@@ -21,31 +21,61 @@ export function VoiceSelector({
   loading, error, onVoiceChange, onSearchChange, onLanguageChange, onRetry,
 }: VoiceSelectorProps) {
   const [langSearch, setLangSearch] = useState('');
+  const [filterStyle, setFilterStyle] = useState(false);
+  const [filterRole, setFilterRole] = useState(false);
+
+  const filteredAllVoices = useMemo(() => {
+    if (!filterStyle && !filterRole) return allVoices;
+    return allVoices.filter((v) => {
+      const hasStyle = v.StyleList && v.StyleList.length > 0;
+      const hasRole = v.RolePlayList && v.RolePlayList.length > 0;
+      if (filterStyle && filterRole) return hasStyle && hasRole;
+      if (filterStyle) return hasStyle;
+      return hasRole;
+    });
+  }, [allVoices, filterStyle, filterRole]);
+
+  const filteredVoices = useMemo(() => {
+    if (!filterStyle && !filterRole) return voices;
+    return voices.filter((v) => {
+      const hasStyle = v.StyleList && v.StyleList.length > 0;
+      const hasRole = v.RolePlayList && v.RolePlayList.length > 0;
+      if (filterStyle && filterRole) return hasStyle && hasRole;
+      if (filterStyle) return hasStyle;
+      return hasRole;
+    });
+  }, [voices, filterStyle, filterRole]);
+
+  const filteredLanguages = useMemo(() => {
+    const localesWithVoices = new Set(filteredAllVoices.map((v) => v.Locale));
+    let langs = (filterStyle || filterRole)
+      ? languages.filter((lang) => localesWithVoices.has(lang))
+      : languages;
+    if (langSearch) {
+      langs = langs.filter((lang) =>
+        lang.toLowerCase().includes(langSearch.toLowerCase())
+      );
+    }
+    return langs;
+  }, [languages, langSearch, filteredAllVoices, filterStyle, filterRole]);
 
   const voiceCountByLang = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const v of allVoices) {
+    for (const v of filteredAllVoices) {
       counts.set(v.Locale, (counts.get(v.Locale) || 0) + 1);
     }
     return counts;
-  }, [allVoices]);
+  }, [filteredAllVoices]);
 
   const langStyleRoleInfo = useMemo(() => {
     const hasStyle = new Set<string>();
     const hasRole = new Set<string>();
-    for (const v of allVoices) {
+    for (const v of filteredAllVoices) {
       if (v.StyleList && v.StyleList.length > 0) hasStyle.add(v.Locale);
       if (v.RolePlayList && v.RolePlayList.length > 0) hasRole.add(v.Locale);
     }
     return { hasStyle, hasRole };
-  }, [allVoices]);
-
-  const filteredLanguages = useMemo(() => {
-    if (!langSearch) return languages;
-    return languages.filter((lang) =>
-      lang.toLowerCase().includes(langSearch.toLowerCase())
-    );
-  }, [languages, langSearch]);
+  }, [filteredAllVoices]);
 
   return (
     <div className="space-y-3 p-4 bg-white rounded-lg shadow-sm border">
@@ -56,6 +86,17 @@ export function VoiceSelector({
           <button onClick={onRetry} className="underline hover:no-underline">Retry</button>
         </div>
       )}
+
+      <div className="flex items-center gap-4 text-sm">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterStyle} onChange={(e) => setFilterStyle(e.target.checked)} className="rounded" />
+          <span className="text-gray-600">with style</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterRole} onChange={(e) => setFilterRole(e.target.checked)} className="rounded" />
+          <span className="text-gray-600">with role</span>
+        </label>
+      </div>
 
       <div className="flex gap-3">
         {/* Left: Language selector */}
@@ -106,13 +147,13 @@ export function VoiceSelector({
               const voice = voices.find((v) => v.ShortName === e.target.value) || null;
               onVoiceChange(voice);
             }}
-            disabled={loading || voices.length === 0}
+            disabled={loading || filteredVoices.length === 0}
             className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
             size={10}
           >
             {loading && <option>Loading voices...</option>}
-            {!loading && voices.length === 0 && <option>No voices available</option>}
-            {voices.map((voice) => {
+            {!loading && filteredVoices.length === 0 && <option>No voices available</option>}
+            {filteredVoices.map((voice) => {
               const hasStyle = voice.StyleList && voice.StyleList.length > 0;
               const hasRole = voice.RolePlayList && voice.RolePlayList.length > 0;
               const suffix = hasStyle && hasRole ? ' - with style|role'
@@ -127,7 +168,7 @@ export function VoiceSelector({
             })}
           </select>
           <p className="text-xs text-gray-500">
-            {voices.length} voice{voices.length !== 1 ? 's' : ''}
+            {filteredVoices.length} voice{filteredVoices.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>
