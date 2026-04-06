@@ -122,7 +122,7 @@ export function VoiceSelector({
             className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
             size={10}
           >
-            <option value="">All ({languages.length})</option>
+            <option value="">All ({filteredLanguages.length})</option>
             {filteredLanguages.map((lang) => {
               const s = langStyleRoleInfo.hasStyle.has(lang);
               const r = langStyleRoleInfo.hasRole.has(lang);
