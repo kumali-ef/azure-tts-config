@@ -23,32 +23,37 @@ export function VoiceSelector({
   const [langSearch, setLangSearch] = useState('');
   const [filterStyle, setFilterStyle] = useState(false);
   const [filterRole, setFilterRole] = useState(false);
+  const [filterMultiLang, setFilterMultiLang] = useState(false);
 
   const filteredAllVoices = useMemo(() => {
-    if (!filterStyle && !filterRole) return allVoices;
+    if (!filterStyle && !filterRole && !filterMultiLang) return allVoices;
     return allVoices.filter((v) => {
       const hasStyle = v.StyleList && v.StyleList.length > 0;
       const hasRole = v.RolePlayList && v.RolePlayList.length > 0;
-      if (filterStyle && filterRole) return hasStyle && hasRole;
-      if (filterStyle) return hasStyle;
-      return hasRole;
+      const isMultiLang = v.ShortName.includes('Multilingual');
+      if (filterStyle && !hasStyle) return false;
+      if (filterRole && !hasRole) return false;
+      if (filterMultiLang && !isMultiLang) return false;
+      return true;
     });
-  }, [allVoices, filterStyle, filterRole]);
+  }, [allVoices, filterStyle, filterRole, filterMultiLang]);
 
   const filteredVoices = useMemo(() => {
-    if (!filterStyle && !filterRole) return voices;
+    if (!filterStyle && !filterRole && !filterMultiLang) return voices;
     return voices.filter((v) => {
       const hasStyle = v.StyleList && v.StyleList.length > 0;
       const hasRole = v.RolePlayList && v.RolePlayList.length > 0;
-      if (filterStyle && filterRole) return hasStyle && hasRole;
-      if (filterStyle) return hasStyle;
-      return hasRole;
+      const isMultiLang = v.ShortName.includes('Multilingual');
+      if (filterStyle && !hasStyle) return false;
+      if (filterRole && !hasRole) return false;
+      if (filterMultiLang && !isMultiLang) return false;
+      return true;
     });
-  }, [voices, filterStyle, filterRole]);
+  }, [voices, filterStyle, filterRole, filterMultiLang]);
 
   const filteredLanguages = useMemo(() => {
     const localesWithVoices = new Set(filteredAllVoices.map((v) => v.Locale));
-    let langs = (filterStyle || filterRole)
+    let langs = (filterStyle || filterRole || filterMultiLang)
       ? languages.filter((lang) => localesWithVoices.has(lang))
       : languages;
     if (langSearch) {
@@ -57,7 +62,7 @@ export function VoiceSelector({
       );
     }
     return langs;
-  }, [languages, langSearch, filteredAllVoices, filterStyle, filterRole]);
+  }, [languages, langSearch, filteredAllVoices, filterStyle, filterRole, filterMultiLang]);
 
   const voiceCountByLang = useMemo(() => {
     const counts = new Map<string, number>();
@@ -87,6 +92,10 @@ export function VoiceSelector({
       )}
 
       <div className="flex items-center gap-4 text-sm">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterMultiLang} onChange={(e) => setFilterMultiLang(e.target.checked)} className="rounded" />
+          <span className="text-gray-600">multilingual</span>
+        </label>
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={filterStyle} onChange={(e) => setFilterStyle(e.target.checked)} className="rounded" />
           <span className="text-gray-600">with style</span>
