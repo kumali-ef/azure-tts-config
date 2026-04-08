@@ -53,7 +53,3 @@ export function buildSsml(config: TtsConfig): string {
 
   return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"${msttsNs} xml:lang="${config.language}"><voice name="${config.voiceName}">${innerContent}</voice></speak>`;
 }
-
-export function buildPlainTextSsml(voiceName: string, language: string, text: string): string {
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}"><voice name="${voiceName}">${text}</voice></speak>`;
-}

@@ -4,8 +4,8 @@ import { DEFAULT_CONFIG } from './types';
 import { useAzureSettings } from './hooks/useAzureSettings';
 import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';
-import { buildSsml, buildPlainTextSsml } from './utils/ssml';
-import { synthesizeSpeech } from './utils/azure-tts';
+import { buildSsml } from './utils/ssml';
+import { synthesizeSpeech, synthesizePlainText } from './utils/azure-tts';
 import {
   getStoredDeploymentId, setStoredDeploymentId,
   getStoredCustomVoiceName, setStoredCustomVoiceName,
@@ -100,11 +100,17 @@ function App() {
     setIsSynthesizing(true);
     setError(null);
     try {
-      const ssml = config.plainTextMode
-        ? buildPlainTextSsml(effectiveVoiceName, config.language, config.text)
-        : buildSsml({ ...config, voiceName: effectiveVoiceName });
+      let audioBuffer: ArrayBuffer;
+      let ssml: string;
+
       const startTime = performance.now();
-      const audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
+      if (config.plainTextMode) {
+        audioBuffer = await synthesizePlainText(key, region, config.text, effectiveVoiceName, effectiveDeploymentId);
+        ssml = config.text; // Store the raw text as-is
+      } else {
+        ssml = buildSsml({ ...config, voiceName: effectiveVoiceName });
+        audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
+      }
       const apiResponseTimeMs = Math.round(performance.now() - startTime);
       const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);

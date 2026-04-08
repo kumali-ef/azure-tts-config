@@ -41,3 +41,31 @@ export async function synthesizeSpeech(
 
   return response.arrayBuffer();
 }
+
+export async function synthesizePlainText(
+  key: string,
+  region: string,
+  text: string,
+  voiceName: string,
+  deploymentId?: string
+): Promise<ArrayBuffer> {
+  const baseUrl = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
+  const url = deploymentId ? `${baseUrl}?deploymentId=${encodeURIComponent(deploymentId)}` : baseUrl;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': key,
+      'Content-Type': 'text/plain',
+      'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+      'X-Microsoft-VoiceName': voiceName,
+    },
+    body: text,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Synthesis failed: ${response.status} - ${errorText}`);
+  }
+
+  return response.arrayBuffer();
+}
