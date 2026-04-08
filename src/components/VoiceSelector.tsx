@@ -24,36 +24,40 @@ export function VoiceSelector({
   const [filterStyle, setFilterStyle] = useState(false);
   const [filterRole, setFilterRole] = useState(false);
   const [filterMultiLang, setFilterMultiLang] = useState(false);
+  const [filterDragonHD, setFilterDragonHD] = useState(false);
+  const [filterMale, setFilterMale] = useState(false);
+  const [filterFemale, setFilterFemale] = useState(false);
+
+  const applyFilters = (list: AzureVoice[]) => {
+    return list.filter((v) => {
+      if (filterStyle && !(v.StyleList && v.StyleList.length > 0)) return false;
+      if (filterRole && !(v.RolePlayList && v.RolePlayList.length > 0)) return false;
+      if (filterMultiLang && !v.ShortName.includes('Multilingual')) return false;
+      if (filterDragonHD && !v.ShortName.includes('DragonHD')) return false;
+      // Gender: if only one is checked, filter to that gender; both or neither = no filter
+      if (filterMale !== filterFemale) {
+        if (filterMale && v.Gender !== 'Male') return false;
+        if (filterFemale && v.Gender !== 'Female') return false;
+      }
+      return true;
+    });
+  };
+
+  const anyFilter = filterStyle || filterRole || filterMultiLang || filterDragonHD || filterMale !== filterFemale;
 
   const filteredAllVoices = useMemo(() => {
-    if (!filterStyle && !filterRole && !filterMultiLang) return allVoices;
-    return allVoices.filter((v) => {
-      const hasStyle = v.StyleList && v.StyleList.length > 0;
-      const hasRole = v.RolePlayList && v.RolePlayList.length > 0;
-      const isMultiLang = v.ShortName.includes('Multilingual');
-      if (filterStyle && !hasStyle) return false;
-      if (filterRole && !hasRole) return false;
-      if (filterMultiLang && !isMultiLang) return false;
-      return true;
-    });
-  }, [allVoices, filterStyle, filterRole, filterMultiLang]);
+    if (!anyFilter) return allVoices;
+    return applyFilters(allVoices);
+  }, [allVoices, filterStyle, filterRole, filterMultiLang, filterDragonHD, filterMale, filterFemale]);
 
   const filteredVoices = useMemo(() => {
-    if (!filterStyle && !filterRole && !filterMultiLang) return voices;
-    return voices.filter((v) => {
-      const hasStyle = v.StyleList && v.StyleList.length > 0;
-      const hasRole = v.RolePlayList && v.RolePlayList.length > 0;
-      const isMultiLang = v.ShortName.includes('Multilingual');
-      if (filterStyle && !hasStyle) return false;
-      if (filterRole && !hasRole) return false;
-      if (filterMultiLang && !isMultiLang) return false;
-      return true;
-    });
-  }, [voices, filterStyle, filterRole, filterMultiLang]);
+    if (!anyFilter) return voices;
+    return applyFilters(voices);
+  }, [voices, filterStyle, filterRole, filterMultiLang, filterDragonHD, filterMale, filterFemale]);
 
   const filteredLanguages = useMemo(() => {
     const localesWithVoices = new Set(filteredAllVoices.map((v) => v.Locale));
-    let langs = (filterStyle || filterRole || filterMultiLang)
+    let langs = anyFilter
       ? languages.filter((lang) => localesWithVoices.has(lang))
       : languages;
     if (langSearch) {
@@ -62,7 +66,7 @@ export function VoiceSelector({
       );
     }
     return langs;
-  }, [languages, langSearch, filteredAllVoices, filterStyle, filterRole, filterMultiLang]);
+  }, [languages, langSearch, filteredAllVoices, anyFilter]);
 
   const voiceCountByLang = useMemo(() => {
     const counts = new Map<string, number>();
@@ -103,6 +107,18 @@ export function VoiceSelector({
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={filterRole} onChange={(e) => setFilterRole(e.target.checked)} className="rounded" />
           <span className="text-gray-600">with role</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterDragonHD} onChange={(e) => setFilterDragonHD(e.target.checked)} className="rounded" />
+          <span className="text-gray-600">Dragon HD</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterMale} onChange={(e) => setFilterMale(e.target.checked)} className="rounded" />
+          <span className="text-gray-600">Male</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterFemale} onChange={(e) => setFilterFemale(e.target.checked)} className="rounded" />
+          <span className="text-gray-600">Female</span>
         </label>
       </div>
 
@@ -152,8 +168,18 @@ export function VoiceSelector({
           <select
             value={selectedVoice}
             onChange={(e) => {
-              const voice = voices.find((v) => v.ShortName === e.target.value) || null;
+              const voice = filteredVoices.find((v) => v.ShortName === e.target.value) || null;
               onVoiceChange(voice);
+            }}
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              if (target.tagName === 'OPTION') {
+                const value = (target as HTMLOptionElement).value;
+                if (value !== selectedVoice) {
+                  const voice = filteredVoices.find((v) => v.ShortName === value) || null;
+                  onVoiceChange(voice);
+                }
+              }
             }}
             disabled={loading || filteredVoices.length === 0}
             className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500"
