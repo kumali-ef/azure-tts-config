@@ -77,7 +77,9 @@ function App() {
     setError(null);
     try {
       const ssml = buildSsml(config);
+      const startTime = performance.now();
       const audioBuffer = await synthesizeSpeech(key, region, ssml);
+      const apiResponseTimeMs = Math.round(performance.now() - startTime);
       const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
       if (audioRef.current) {
@@ -101,6 +103,7 @@ function App() {
           ? JSON.stringify({ type: config.breakType, value: config.breakValue })
           : null,
         ssml,
+        api_response_time_ms: apiResponseTimeMs,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synthesis failed');

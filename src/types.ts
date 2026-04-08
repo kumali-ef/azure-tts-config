@@ -49,6 +49,7 @@ export interface Recording {
   ssml: string;
   audio_filename: string;
   output_format: string;
+  api_response_time_ms: number | null;
   created_at: string;
   label: string | null;
 }

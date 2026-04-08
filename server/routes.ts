@@ -48,6 +48,7 @@ router.post('/recordings', upload.single('audio'), (req: Request, res: Response)
       ssml: config.ssml,
       audio_filename: audioFilename,
       output_format: config.output_format || 'audio-16khz-128kbitrate-mono-mp3',
+      api_response_time_ms: config.api_response_time_ms ?? null,
       label: config.label || null,
     });
 

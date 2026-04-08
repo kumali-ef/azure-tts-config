@@ -34,10 +34,17 @@ db.exec(`
     ssml TEXT NOT NULL,
     audio_filename TEXT NOT NULL,
     output_format TEXT NOT NULL DEFAULT 'audio-16khz-128kbitrate-mono-mp3',
+    api_response_time_ms INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     label TEXT
   )
 `);
+
+// Migrate: add api_response_time_ms if missing (for existing databases)
+const columns = db.pragma('table_info(recordings)') as { name: string }[];
+if (!columns.some((c) => c.name === 'api_response_time_ms')) {
+  db.exec('ALTER TABLE recordings ADD COLUMN api_response_time_ms INTEGER');
+}
 
 export interface RecordingRow {
   id: string;
@@ -56,15 +63,16 @@ export interface RecordingRow {
   ssml: string;
   audio_filename: string;
   output_format: string;
+  api_response_time_ms: number | null;
   created_at: string;
   label: string | null;
 }
 
 const insertStmt = db.prepare(`
   INSERT INTO recordings (id, voice_name, voice_display_name, language, text, rate, pitch, volume,
-    emphasis, style, style_degree, role, break_config, ssml, audio_filename, output_format, label)
+    emphasis, style, style_degree, role, break_config, ssml, audio_filename, output_format, api_response_time_ms, label)
   VALUES (@id, @voice_name, @voice_display_name, @language, @text, @rate, @pitch, @volume,
-    @emphasis, @style, @style_degree, @role, @break_config, @ssml, @audio_filename, @output_format, @label)
+    @emphasis, @style, @style_degree, @role, @break_config, @ssml, @audio_filename, @output_format, @api_response_time_ms, @label)
 `);
 
 const listStmt = db.prepare(
