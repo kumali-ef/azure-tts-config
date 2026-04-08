@@ -31,7 +31,6 @@ export interface TtsConfig {
   breakValue: string;
   customVoiceMode: boolean;
   deploymentId: string;
-  plainTextMode: boolean;
 }
 
 /** Recording metadata stored in the database */
@@ -75,5 +74,4 @@ export const DEFAULT_CONFIG: TtsConfig = {
   breakValue: '',
   customVoiceMode: false,
   deploymentId: '',
-  plainTextMode: false,
 };

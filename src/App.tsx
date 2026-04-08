@@ -5,7 +5,7 @@ import { useAzureSettings } from './hooks/useAzureSettings';
 import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';
 import { buildSsml } from './utils/ssml';
-import { synthesizeSpeech, synthesizePlainText } from './utils/azure-tts';
+import { synthesizeSpeech } from './utils/azure-tts';
 import {
   getStoredDeploymentId, setStoredDeploymentId,
   getStoredCustomVoiceName, setStoredCustomVoiceName,
@@ -40,7 +40,6 @@ function recordingToConfig(rec: Recording): TtsConfig {
     breakValue: breakConfig?.value || '',
     customVoiceMode: !!rec.deployment_id,
     deploymentId: rec.deployment_id || '',
-    plainTextMode: false,
   };
 }
 
@@ -100,17 +99,10 @@ function App() {
     setIsSynthesizing(true);
     setError(null);
     try {
-      let audioBuffer: ArrayBuffer;
-      let ssml: string;
-
+      const synthConfig = { ...config, voiceName: effectiveVoiceName };
+      const ssml = buildSsml(synthConfig);
       const startTime = performance.now();
-      if (config.plainTextMode) {
-        audioBuffer = await synthesizePlainText(key, region, config.text, effectiveVoiceName, config.language, effectiveDeploymentId);
-        ssml = config.text; // Store the raw text as-is
-      } else {
-        ssml = buildSsml({ ...config, voiceName: effectiveVoiceName });
-        audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
-      }
+      const audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
       const apiResponseTimeMs = Math.round(performance.now() - startTime);
       const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
@@ -124,16 +116,16 @@ function App() {
         voice_display_name: effectiveDisplayName,
         language: config.language,
         text: config.text,
-        rate: config.plainTextMode ? 'medium' : config.rate,
-        pitch: config.plainTextMode ? 'medium' : config.pitch,
-        volume: config.plainTextMode ? 'medium' : config.volume,
-        emphasis: config.plainTextMode ? null : (config.emphasis || null),
-        style: (isCustom || config.plainTextMode) ? null : (config.style || null),
-        style_degree: (isCustom || config.plainTextMode) ? null : (config.style ? config.styleDegree : null),
-        role: (isCustom || config.plainTextMode) ? null : (config.role || null),
-        break_config: config.plainTextMode ? null : (config.breakValue
+        rate: config.rate,
+        pitch: config.pitch,
+        volume: config.volume,
+        emphasis: config.emphasis || null,
+        style: isCustom ? null : (config.style || null),
+        style_degree: isCustom ? null : (config.style ? config.styleDegree : null),
+        role: isCustom ? null : (config.role || null),
+        break_config: config.breakValue
           ? JSON.stringify({ type: config.breakType, value: config.breakValue })
-          : null),
+          : null,
         ssml,
         api_response_time_ms: apiResponseTimeMs,
         deployment_id: isCustom ? customDeploymentId : null,
@@ -216,37 +208,33 @@ function App() {
             />
           </Accordion>
 
-          {!config.plainTextMode && (
-            <Accordion title="Prosody">
-              <ProsodyControls
-                rate={config.rate}
-                pitch={config.pitch}
-                volume={config.volume}
-                onRateChange={(rate) => updateConfig({ rate })}
-                onPitchChange={(pitch) => updateConfig({ pitch })}
-                onVolumeChange={(volume) => updateConfig({ volume })}
+          <Accordion title="Prosody">
+            <ProsodyControls
+              rate={config.rate}
+              pitch={config.pitch}
+              volume={config.volume}
+              onRateChange={(rate) => updateConfig({ rate })}
+              onPitchChange={(pitch) => updateConfig({ pitch })}
+              onVolumeChange={(volume) => updateConfig({ volume })}
+            />
+          </Accordion>
+
+          <Accordion title="Emphasis & Break">
+            <div className="grid grid-cols-2 gap-3 p-4">
+              <EmphasisControl
+                emphasis={config.emphasis}
+                onChange={(emphasis) => updateConfig({ emphasis })}
               />
-            </Accordion>
-          )}
+              <BreakControl
+                breakType={config.breakType}
+                breakValue={config.breakValue}
+                onBreakTypeChange={(breakType) => updateConfig({ breakType })}
+                onBreakValueChange={(breakValue) => updateConfig({ breakValue })}
+              />
+            </div>
+          </Accordion>
 
-          {!config.plainTextMode && (
-            <Accordion title="Emphasis & Break">
-              <div className="grid grid-cols-2 gap-3 p-4">
-                <EmphasisControl
-                  emphasis={config.emphasis}
-                  onChange={(emphasis) => updateConfig({ emphasis })}
-                />
-                <BreakControl
-                  breakType={config.breakType}
-                  breakValue={config.breakValue}
-                  onBreakTypeChange={(breakType) => updateConfig({ breakType })}
-                  onBreakValueChange={(breakValue) => updateConfig({ breakValue })}
-                />
-              </div>
-            </Accordion>
-          )}
-
-          {!config.plainTextMode && !config.customVoiceMode && (selectedVoice?.StyleList?.length || selectedVoice?.RolePlayList?.length) ? (
+          {!config.customVoiceMode && (selectedVoice?.StyleList?.length || selectedVoice?.RolePlayList?.length) ? (
             <Accordion title="Style & Role">
               <StyleRoleControls
                 styles={selectedVoice?.StyleList || []}
@@ -262,12 +250,7 @@ function App() {
           ) : null}
 
           <Accordion title="Text">
-            <TextInput
-              text={config.text}
-              plainTextMode={config.plainTextMode}
-              onChange={(text) => updateConfig({ text })}
-              onPlainTextModeChange={(plainTextMode) => updateConfig({ plainTextMode })}
-            />
+            <TextInput text={config.text} onChange={(text) => updateConfig({ text })} />
           </Accordion>
 
           <ActionButtons
