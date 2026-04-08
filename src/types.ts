@@ -29,6 +29,8 @@ export interface TtsConfig {
   role: string;
   breakType: 'duration' | 'strength';
   breakValue: string;
+  customVoiceMode: boolean;
+  deploymentId: string;
 }
 
 /** Recording metadata stored in the database */
@@ -50,6 +52,7 @@ export interface Recording {
   audio_filename: string;
   output_format: string;
   api_response_time_ms: number | null;
+  deployment_id: string | null;
   created_at: string;
   label: string | null;
 }
@@ -69,4 +72,6 @@ export const DEFAULT_CONFIG: TtsConfig = {
   role: '',
   breakType: 'strength',
   breakValue: '',
+  customVoiceMode: false,
+  deploymentId: '',
 };

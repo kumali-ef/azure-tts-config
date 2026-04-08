@@ -131,6 +131,9 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDelete, o
                 <p className="text-sm font-medium text-gray-800 truncate">
                   {rec.voice_display_name}
                   <span className="text-gray-400 font-normal ml-1">({rec.language})</span>
+                  {rec.deployment_id && (
+                    <span className="ml-1.5 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-normal">Custom</span>
+                  )}
                 </p>
                 <p className="text-xs text-gray-500 truncate mt-0.5">{rec.text}</p>
                 <div className="flex flex-wrap gap-1 mt-1">

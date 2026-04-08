@@ -10,15 +10,25 @@ interface VoiceSelectorProps {
   languageFilter: string;
   loading: boolean;
   error: string | null;
+  customVoiceMode: boolean;
+  customVoiceName: string;
+  customDeploymentId: string;
+  customLanguage: string;
   onVoiceChange: (voice: AzureVoice | null) => void;
   onSearchChange: (query: string) => void;
   onLanguageChange: (language: string) => void;
   onRetry: () => void;
+  onCustomVoiceModeChange: (enabled: boolean) => void;
+  onCustomVoiceNameChange: (name: string) => void;
+  onCustomDeploymentIdChange: (id: string) => void;
+  onCustomLanguageChange: (language: string) => void;
 }
 
 export function VoiceSelector({
   voices, allVoices, languages, selectedVoice, searchQuery, languageFilter,
   loading, error, onVoiceChange, onSearchChange, onLanguageChange, onRetry,
+  customVoiceMode, customVoiceName, customDeploymentId, customLanguage,
+  onCustomVoiceModeChange, onCustomVoiceNameChange, onCustomDeploymentIdChange, onCustomLanguageChange,
 }: VoiceSelectorProps) {
   const [langSearch, setLangSearch] = useState('');
   const [filterStyle, setFilterStyle] = useState(false);
@@ -88,6 +98,64 @@ export function VoiceSelector({
 
   return (
     <div className="space-y-3 p-4">
+      {/* Standard / Custom toggle */}
+      <div className="flex rounded-md overflow-hidden border w-fit">
+        <button
+          onClick={() => onCustomVoiceModeChange(false)}
+          className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+            !customVoiceMode ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          Standard
+        </button>
+        <button
+          onClick={() => onCustomVoiceModeChange(true)}
+          className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+            customVoiceMode ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          Custom
+        </button>
+      </div>
+
+      {customVoiceMode ? (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Deployment ID</label>
+            <input
+              type="text"
+              value={customDeploymentId}
+              onChange={(e) => onCustomDeploymentIdChange(e.target.value)}
+              placeholder="Enter deployment ID (GUID from Azure portal)"
+              className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Custom Voice Name</label>
+            <input
+              type="text"
+              value={customVoiceName}
+              onChange={(e) => onCustomVoiceNameChange(e.target.value)}
+              placeholder="Enter custom voice name"
+              className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Language</label>
+            <input
+              type="text"
+              value={customLanguage}
+              onChange={(e) => onCustomLanguageChange(e.target.value)}
+              placeholder="e.g. en-US"
+              className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <p className="text-xs text-gray-400">
+            Get these from Azure Speech Studio → Custom Voice → Deploy model
+          </p>
+        </div>
+      ) : (
+        <>
       {error && (
         <div className="flex items-center gap-2 text-red-600 text-sm">
           <span>{error}</span>
@@ -206,6 +274,8 @@ export function VoiceSelector({
           </p>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

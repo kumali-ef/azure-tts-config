@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TtsConfig, AzureVoice, Recording } from './types';
 import { DEFAULT_CONFIG } from './types';
 import { useAzureSettings } from './hooks/useAzureSettings';
@@ -6,6 +6,10 @@ import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';
 import { buildSsml } from './utils/ssml';
 import { synthesizeSpeech } from './utils/azure-tts';
+import {
+  getStoredDeploymentId, setStoredDeploymentId,
+  getStoredCustomVoiceName, setStoredCustomVoiceName,
+} from './utils/storage';
 import { Accordion } from './components/Accordion';
 import { AzureSettings } from './components/AzureSettings';
 import { VoiceSelector } from './components/VoiceSelector';
@@ -34,6 +38,8 @@ function recordingToConfig(rec: Recording): TtsConfig {
     role: rec.role || '',
     breakType: breakConfig?.type || 'strength',
     breakValue: breakConfig?.value || '',
+    customVoiceMode: !!rec.deployment_id,
+    deploymentId: rec.deployment_id || '',
   };
 }
 
@@ -50,6 +56,13 @@ function App() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [codeModalConfig, setCodeModalConfig] = useState<TtsConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Custom voice state (persisted in localStorage)
+  const [customVoiceName, setCustomVoiceName] = useState(getStoredCustomVoiceName);
+  const [customDeploymentId, setCustomDeploymentId] = useState(getStoredDeploymentId);
+
+  useEffect(() => { setStoredCustomVoiceName(customVoiceName); }, [customVoiceName]);
+  useEffect(() => { setStoredDeploymentId(customDeploymentId); }, [customDeploymentId]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -72,13 +85,24 @@ function App() {
   };
 
   const handleSynthesize = async () => {
-    if (!isConfigured || !config.voiceName || !config.text) return;
+    if (!isConfigured || !config.text) return;
+
+    // In custom mode, we need deploymentId and customVoiceName
+    const isCustom = config.customVoiceMode;
+    const effectiveVoiceName = isCustom ? customVoiceName : config.voiceName;
+    const effectiveDisplayName = isCustom ? customVoiceName : config.voiceDisplayName;
+    const effectiveDeploymentId = isCustom ? customDeploymentId : undefined;
+
+    if (!effectiveVoiceName) return;
+    if (isCustom && !customDeploymentId) return;
+
     setIsSynthesizing(true);
     setError(null);
     try {
-      const ssml = buildSsml(config);
+      const synthConfig = { ...config, voiceName: effectiveVoiceName };
+      const ssml = buildSsml(synthConfig);
       const startTime = performance.now();
-      const audioBuffer = await synthesizeSpeech(key, region, ssml);
+      const audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
       const apiResponseTimeMs = Math.round(performance.now() - startTime);
       const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
@@ -88,22 +112,23 @@ function App() {
       }
       // Auto-save after successful synthesis
       await saveRecording(blob, {
-        voice_name: config.voiceName,
-        voice_display_name: config.voiceDisplayName,
+        voice_name: effectiveVoiceName,
+        voice_display_name: effectiveDisplayName,
         language: config.language,
         text: config.text,
         rate: config.rate,
         pitch: config.pitch,
         volume: config.volume,
         emphasis: config.emphasis || null,
-        style: config.style || null,
-        style_degree: config.style ? config.styleDegree : null,
-        role: config.role || null,
+        style: isCustom ? null : (config.style || null),
+        style_degree: isCustom ? null : (config.style ? config.styleDegree : null),
+        role: isCustom ? null : (config.role || null),
         break_config: config.breakValue
           ? JSON.stringify({ type: config.breakType, value: config.breakValue })
           : null,
         ssml,
         api_response_time_ms: apiResponseTimeMs,
+        deployment_id: isCustom ? customDeploymentId : null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synthesis failed');
@@ -122,12 +147,23 @@ function App() {
   const handleLoadRecording = (rec: Recording) => {
     const newConfig = recordingToConfig(rec);
     setConfig(newConfig);
-    setLanguageFilter(rec.language);
-    const voice = allVoices.find((v) => v.ShortName === rec.voice_name) || null;
-    if (voice) setSelectedVoice(voice);
+    if (rec.deployment_id) {
+      // Loading a custom voice recording
+      setCustomDeploymentId(rec.deployment_id);
+      setCustomVoiceName(rec.voice_name);
+    } else {
+      // Loading a standard voice recording
+      setLanguageFilter(rec.language);
+      const voice = allVoices.find((v) => v.ShortName === rec.voice_name) || null;
+      if (voice) setSelectedVoice(voice);
+    }
   };
 
-  const canSynthesize = isConfigured && !!config.voiceName && !!config.text;
+  const canSynthesize = isConfigured && !!config.text && (
+    config.customVoiceMode
+      ? !!customVoiceName && !!customDeploymentId
+      : !!config.voiceName
+  );
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -157,10 +193,18 @@ function App() {
               languageFilter={languageFilter}
               loading={voicesLoading}
               error={voicesError}
+              customVoiceMode={config.customVoiceMode}
+              customVoiceName={customVoiceName}
+              customDeploymentId={customDeploymentId}
+              customLanguage={config.language}
               onVoiceChange={handleVoiceSelect}
               onSearchChange={setSearchQuery}
               onLanguageChange={setLanguageFilter}
               onRetry={retry}
+              onCustomVoiceModeChange={(enabled) => updateConfig({ customVoiceMode: enabled })}
+              onCustomVoiceNameChange={setCustomVoiceName}
+              onCustomDeploymentIdChange={setCustomDeploymentId}
+              onCustomLanguageChange={(language) => updateConfig({ language })}
             />
           </Accordion>
 
@@ -190,7 +234,7 @@ function App() {
             </div>
           </Accordion>
 
-          {(selectedVoice?.StyleList?.length || selectedVoice?.RolePlayList?.length) ? (
+          {!config.customVoiceMode && (selectedVoice?.StyleList?.length || selectedVoice?.RolePlayList?.length) ? (
             <Accordion title="Style & Role">
               <StyleRoleControls
                 styles={selectedVoice?.StyleList || []}

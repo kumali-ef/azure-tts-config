@@ -19,9 +19,11 @@ export async function fetchVoices(key: string, region: string): Promise<AzureVoi
 export async function synthesizeSpeech(
   key: string,
   region: string,
-  ssml: string
+  ssml: string,
+  deploymentId?: string
 ): Promise<ArrayBuffer> {
-  const url = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
+  const baseUrl = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
+  const url = deploymentId ? `${baseUrl}?deploymentId=${encodeURIComponent(deploymentId)}` : baseUrl;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
