@@ -105,7 +105,7 @@ function App() {
 
       const startTime = performance.now();
       if (config.plainTextMode) {
-        audioBuffer = await synthesizePlainText(key, region, config.text, effectiveVoiceName, effectiveDeploymentId);
+        audioBuffer = await synthesizePlainText(key, region, config.text, effectiveVoiceName, config.language, effectiveDeploymentId);
         ssml = config.text; // Store the raw text as-is
       } else {
         ssml = buildSsml({ ...config, voiceName: effectiveVoiceName });
