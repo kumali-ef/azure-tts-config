@@ -5,7 +5,7 @@ import { useAzureSettings } from './hooks/useAzureSettings';
 import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';
 import { buildSsml } from './utils/ssml';
-import { synthesizeSpeech } from './utils/azure-tts';
+import { synthesizeSpeech, synthesizeSpeechStreaming } from './utils/azure-tts';
 import {
   getStoredDeploymentId, setStoredDeploymentId,
   getStoredCustomVoiceName, setStoredCustomVoiceName,
@@ -54,6 +54,7 @@ function App() {
   const [config, setConfig] = useState<TtsConfig>(DEFAULT_CONFIG);
   const [selectedVoice, setSelectedVoice] = useState<AzureVoice | null>(null);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [codeModalConfig, setCodeModalConfig] = useState<TtsConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -134,6 +135,53 @@ function App() {
       setError(err instanceof Error ? err.message : 'Synthesis failed');
     } finally {
       setIsSynthesizing(false);
+    }
+  };
+
+  const handleStreamSynthesize = async () => {
+    if (!isConfigured || !config.text || !audioRef.current) return;
+
+    const isCustom = config.customVoiceMode;
+    const effectiveVoiceName = isCustom ? customVoiceName : config.voiceName;
+    const effectiveDisplayName = isCustom ? customVoiceName : config.voiceDisplayName;
+    const effectiveDeploymentId = isCustom ? customDeploymentId : undefined;
+
+    if (!effectiveVoiceName) return;
+    if (isCustom && !customDeploymentId) return;
+
+    setIsStreaming(true);
+    setError(null);
+    try {
+      const synthConfig = { ...config, voiceName: effectiveVoiceName };
+      const ssml = buildSsml(synthConfig);
+      const { ttfbMs, totalMs, buffer } = await synthesizeSpeechStreaming(
+        key, region, ssml, audioRef.current, effectiveDeploymentId
+      );
+      const blob = new Blob([buffer], { type: 'audio/mpeg' });
+      await saveRecording(blob, {
+        voice_name: effectiveVoiceName,
+        voice_display_name: effectiveDisplayName,
+        language: config.language,
+        text: config.text,
+        rate: config.rate,
+        pitch: config.pitch,
+        volume: config.volume,
+        emphasis: config.emphasis || null,
+        style: isCustom ? null : (config.style || null),
+        style_degree: isCustom ? null : (config.style ? config.styleDegree : null),
+        role: isCustom ? null : (config.role || null),
+        break_config: config.breakValue
+          ? JSON.stringify({ type: config.breakType, value: config.breakValue })
+          : null,
+        ssml,
+        api_response_time_ms: ttfbMs,
+        stream_duration_ms: totalMs,
+        deployment_id: isCustom ? customDeploymentId : null,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Streaming synthesis failed');
+    } finally {
+      setIsStreaming(false);
     }
   };
 
@@ -256,7 +304,9 @@ function App() {
           <ActionButtons
             canSynthesize={canSynthesize}
             isSynthesizing={isSynthesizing}
+            isStreaming={isStreaming}
             onSynthesize={handleSynthesize}
+            onStreamSynthesize={handleStreamSynthesize}
             onShowCode={() => setCodeModalConfig(config)}
           />
 

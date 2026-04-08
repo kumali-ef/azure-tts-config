@@ -148,9 +148,11 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDelete, o
                 )}
                 <p className="text-xs text-gray-400 mt-1">
                   {new Date(rec.created_at).toLocaleString()}
-                  {rec.api_response_time_ms != null && (
+                  {rec.stream_duration_ms != null ? (
+                    <span className="ml-2 text-indigo-500">⏱ TTFB {rec.api_response_time_ms}ms | Total {rec.stream_duration_ms}ms</span>
+                  ) : rec.api_response_time_ms != null ? (
                     <span className="ml-2 text-indigo-500">⏱ Take {rec.api_response_time_ms}ms</span>
-                  )}
+                  ) : null}
                 </p>
               </div>
 

@@ -35,6 +35,7 @@ db.exec(`
     audio_filename TEXT NOT NULL,
     output_format TEXT NOT NULL DEFAULT 'audio-16khz-128kbitrate-mono-mp3',
     api_response_time_ms INTEGER,
+    stream_duration_ms INTEGER,
     deployment_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     label TEXT
@@ -48,6 +49,9 @@ if (!columns.some((c) => c.name === 'api_response_time_ms')) {
 }
 if (!columns.some((c) => c.name === 'deployment_id')) {
   db.exec('ALTER TABLE recordings ADD COLUMN deployment_id TEXT');
+}
+if (!columns.some((c) => c.name === 'stream_duration_ms')) {
+  db.exec('ALTER TABLE recordings ADD COLUMN stream_duration_ms INTEGER');
 }
 
 export interface RecordingRow {
@@ -68,6 +72,7 @@ export interface RecordingRow {
   audio_filename: string;
   output_format: string;
   api_response_time_ms: number | null;
+  stream_duration_ms: number | null;
   deployment_id: string | null;
   created_at: string;
   label: string | null;
@@ -75,9 +80,9 @@ export interface RecordingRow {
 
 const insertStmt = db.prepare(`
   INSERT INTO recordings (id, voice_name, voice_display_name, language, text, rate, pitch, volume,
-    emphasis, style, style_degree, role, break_config, ssml, audio_filename, output_format, api_response_time_ms, deployment_id, label)
+    emphasis, style, style_degree, role, break_config, ssml, audio_filename, output_format, api_response_time_ms, stream_duration_ms, deployment_id, label)
   VALUES (@id, @voice_name, @voice_display_name, @language, @text, @rate, @pitch, @volume,
-    @emphasis, @style, @style_degree, @role, @break_config, @ssml, @audio_filename, @output_format, @api_response_time_ms, @deployment_id, @label)
+    @emphasis, @style, @style_degree, @role, @break_config, @ssml, @audio_filename, @output_format, @api_response_time_ms, @stream_duration_ms, @deployment_id, @label)
 `);
 
 const listStmt = db.prepare(
