@@ -1,8 +1,8 @@
 const MODELS = [
-  { id: 'speech-2.8-hd', label: 'speech-2.8-hd', desc: 'High quality' },
-  { id: 'speech-2.8-turbo', label: 'speech-2.8-turbo', desc: 'Fast' },
-  { id: 'speech-2.6-hd', label: 'speech-2.6-hd', desc: 'High quality' },
-  { id: 'speech-2.6-turbo', label: 'speech-2.6-turbo', desc: 'Fast' },
+  { id: 'MiniMax/speech-2.8-hd', label: 'MiniMax/speech-2.8-hd', desc: 'High quality (2.8)' },
+  { id: 'MiniMax/speech-2.8-turbo', label: 'MiniMax/speech-2.8-turbo', desc: 'Fast (2.8)' },
+  { id: 'MiniMax/speech-02-hd', label: 'MiniMax/speech-02-hd', desc: 'High quality (02)' },
+  { id: 'MiniMax/speech-02-turbo', label: 'MiniMax/speech-02-turbo', desc: 'Fast (02)' },
 ];
 
 interface Props {

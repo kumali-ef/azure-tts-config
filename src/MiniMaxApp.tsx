@@ -35,8 +35,8 @@ function recordingToConfig(rec: MiniMaxRecording): MiniMaxConfig {
 }
 
 export function MiniMaxApp() {
-  const { apiKey, setApiKey, groupId, setGroupId, isConfigured } = useMiniMaxSettings();
-  const { voices, loading: voicesLoading, error: voicesError, retry } = useMiniMaxVoices(apiKey, groupId);
+  const { apiKey, setApiKey, isConfigured } = useMiniMaxSettings();
+  const { voices, loading: voicesLoading, error: voicesError, retry } = useMiniMaxVoices(apiKey);
   const { recordings, loading: recsLoading, error: recsError, saveRecording, deleteRecording } = useMiniMaxRecordings();
 
   const [config, setConfig] = useState<MiniMaxConfig>(DEFAULT_MINIMAX_CONFIG);
@@ -51,7 +51,6 @@ export function MiniMaxApp() {
 
   const buildParams = (): MiniMaxSynthesisParams => ({
     apiKey,
-    groupId: groupId || undefined,
     model: config.model,
     text: config.text,
     voiceId: config.useCustomVoice ? config.customVoiceId : config.voiceId,
@@ -133,18 +132,16 @@ export function MiniMaxApp() {
     setConfig(recordingToConfig(rec));
   };
 
-  const is28Model = config.model.startsWith('speech-2.8');
+  const is28Model = config.model.includes('speech-2.8');
 
   return (
     <div className="flex h-[calc(100vh-52px)]">
       {/* Left Panel - Configuration */}
       <div className="w-1/2 overflow-y-auto p-4 space-y-3 border-r">
-        <Accordion title="MiniMax Settings">
+        <Accordion title="Minimax@Aliyun">
           <MiniMaxSettings
             apiKey={apiKey}
-            groupId={groupId}
             onApiKeyChange={setApiKey}
-            onGroupIdChange={setGroupId}
           />
         </Accordion>
 

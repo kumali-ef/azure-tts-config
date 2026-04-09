@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { MiniMaxVoice } from '../types';
 import { fetchMiniMaxVoices } from '../utils/minimax-tts';
 
-export function useMiniMaxVoices(apiKey: string, groupId: string) {
+export function useMiniMaxVoices(apiKey: string) {
   const [voices, setVoices] = useState<MiniMaxVoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -12,20 +12,20 @@ export function useMiniMaxVoices(apiKey: string, groupId: string) {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchMiniMaxVoices(apiKey, groupId || undefined);
+      const result = await fetchMiniMaxVoices(apiKey);
       setVoices(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch voices');
     } finally {
       setLoading(false);
     }
-  }, [apiKey, groupId]);
+  }, [apiKey]);
 
   useEffect(() => {
     if (apiKey) {
       loadVoices();
     }
-  }, [apiKey, groupId, loadVoices]);
+  }, [apiKey, loadVoices]);
 
   return { voices, loading, error, retry: loadVoices };
 }

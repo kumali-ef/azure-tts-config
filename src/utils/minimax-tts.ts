@@ -1,10 +1,9 @@
 import type { MiniMaxVoice } from '../types';
 
-const MINIMAX_API_BASE = 'https://api.minimaxi.com/v1';
+const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
 
 export interface MiniMaxSynthesisParams {
   apiKey: string;
-  groupId?: string;
   model: string;
   text: string;
   voiceId: string;
@@ -18,11 +17,9 @@ export interface MiniMaxSynthesisParams {
   voiceModifySoundEffect?: string;
 }
 
-function buildRequestBody(params: MiniMaxSynthesisParams, stream: boolean) {
-  const body: Record<string, unknown> = {
-    model: params.model,
+function buildRequestBody(params: MiniMaxSynthesisParams) {
+  const input: Record<string, unknown> = {
     text: params.text,
-    stream,
     voice_setting: {
       voice_id: params.voiceId,
       speed: params.speed ?? 1.0,
@@ -36,11 +33,12 @@ function buildRequestBody(params: MiniMaxSynthesisParams, stream: boolean) {
       format: 'mp3',
       channel: 1,
     },
-    output_format: stream ? 'hex' : 'hex',
+    output_format: 'hex',
+    subtitle_enable: false,
   };
 
   if (params.languageBoost) {
-    body.language_boost = params.languageBoost;
+    input.language_boost = params.languageBoost;
   }
 
   const hasVoiceModify =
@@ -49,14 +47,17 @@ function buildRequestBody(params: MiniMaxSynthesisParams, stream: boolean) {
     params.voiceModifySoundEffect;
 
   if (hasVoiceModify) {
-    body.voice_modify = {
+    input.voice_modify = {
       ...(params.voiceModifyTimbre ? { pitch: params.voiceModifyTimbre } : {}),
       ...(params.voiceModifyIntensity ? { intensity: params.voiceModifyIntensity } : {}),
       ...(params.voiceModifySoundEffect ? { sound_effects: params.voiceModifySoundEffect } : {}),
     };
   }
 
-  return body;
+  return {
+    model: params.model,
+    input,
+  };
 }
 
 function hexToArrayBuffer(hex: string): ArrayBuffer {
@@ -69,17 +70,13 @@ function hexToArrayBuffer(hex: string): ArrayBuffer {
 
 /** Synchronous synthesis — returns full audio buffer */
 export async function miniMaxSynthesize(params: MiniMaxSynthesisParams): Promise<ArrayBuffer> {
-  const url = params.groupId
-    ? `${MINIMAX_API_BASE}/t2a_v2?GroupId=${params.groupId}`
-    : `${MINIMAX_API_BASE}/t2a_v2`;
-
-  const response = await fetch(url, {
+  const response = await fetch(DASHSCOPE_API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${params.apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(buildRequestBody(params, false)),
+    body: JSON.stringify(buildRequestBody(params)),
   });
 
   if (!response.ok) {
@@ -89,15 +86,15 @@ export async function miniMaxSynthesize(params: MiniMaxSynthesisParams): Promise
 
   const json = await response.json();
 
-  if (json.base_resp?.status_code !== 0) {
-    throw new Error(`MiniMax API error: ${json.base_resp?.status_msg || 'Unknown error'}`);
+  if (json.output?.base_resp?.status_code !== 0) {
+    throw new Error(`MiniMax API error: ${json.output?.base_resp?.status_msg || 'Unknown error'}`);
   }
 
-  if (!json.data?.audio) {
+  if (!json.output?.data?.audio) {
     throw new Error('MiniMax API returned no audio data');
   }
 
-  return hexToArrayBuffer(json.data.audio);
+  return hexToArrayBuffer(json.output.data.audio);
 }
 
 export interface StreamingResult {
@@ -111,20 +108,17 @@ export async function miniMaxSynthesizeStreaming(
   params: MiniMaxSynthesisParams,
   audioElement: HTMLAudioElement,
 ): Promise<StreamingResult> {
-  const url = params.groupId
-    ? `${MINIMAX_API_BASE}/t2a_v2?GroupId=${params.groupId}`
-    : `${MINIMAX_API_BASE}/t2a_v2`;
-
   const startTime = performance.now();
   let ttfbMs = 0;
 
-  const response = await fetch(url, {
+  const response = await fetch(DASHSCOPE_API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${params.apiKey}`,
       'Content-Type': 'application/json',
+      'X-DashScope-SSE': 'enable',
     },
-    body: JSON.stringify(buildRequestBody(params, true)),
+    body: JSON.stringify(buildRequestBody(params)),
   });
 
   if (!response.ok) {
@@ -147,7 +141,6 @@ export async function miniMaxSynthesizeStreaming(
 
     buffer += decoder.decode(value, { stream: true });
 
-    // MiniMax streaming returns newline-delimited JSON objects
     const lines = buffer.split('\n');
     buffer = lines.pop() || '';
 
@@ -155,23 +148,23 @@ export async function miniMaxSynthesizeStreaming(
       const trimmed = line.trim();
       if (!trimmed || trimmed === 'data: [DONE]') continue;
 
-      // Remove "data: " prefix if present
-      const jsonStr = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed;
+      // Remove SSE "data:" prefix
+      const jsonStr = trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed;
 
       try {
         const chunk = JSON.parse(jsonStr);
-        if (chunk.data?.audio) {
-          const audioBuffer = hexToArrayBuffer(chunk.data.audio);
+        if (chunk.output?.data?.audio) {
+          const audioBuffer = hexToArrayBuffer(chunk.output.data.audio);
           if (ttfbMs === 0) {
             ttfbMs = Math.round(performance.now() - startTime);
           }
           audioChunks.push(audioBuffer);
         }
-        if (chunk.base_resp?.status_code !== 0 && chunk.base_resp?.status_code !== undefined) {
-          throw new Error(`MiniMax streaming error: ${chunk.base_resp?.status_msg || 'Unknown error'}`);
+        if (chunk.output?.base_resp?.status_code !== 0 && chunk.output?.base_resp?.status_code !== undefined) {
+          throw new Error(`MiniMax streaming error: ${chunk.output?.base_resp?.status_msg || 'Unknown error'}`);
         }
       } catch (e) {
-        if (e instanceof SyntaxError) continue; // skip non-JSON lines
+        if (e instanceof SyntaxError) continue;
         throw e;
       }
     }
@@ -201,36 +194,38 @@ export async function miniMaxSynthesizeStreaming(
   };
 }
 
-/** Fetch available voices from MiniMax Voice Management API */
-export async function fetchMiniMaxVoices(apiKey: string, groupId?: string): Promise<MiniMaxVoice[]> {
-  const url = groupId
-    ? `${MINIMAX_API_BASE}/voice/list?GroupId=${groupId}`
-    : `${MINIMAX_API_BASE}/voice/list`;
-
-  const response = await fetch(url, {
+/** Fetch available voices from Aliyun DashScope Voice Management API */
+export async function fetchMiniMaxVoices(apiKey: string): Promise<MiniMaxVoice[]> {
+  const response = await fetch(DASHSCOPE_API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({
+      model: 'MiniMax/speech-2.8-turbo',
+      input: {
+        action: 'get_voice',
+        voice_type: 'all',
+      },
+    }),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`MiniMax Voice API error (${response.status}): ${text}`);
+    throw new Error(`Voice API error (${response.status}): ${text}`);
   }
 
   const json = await response.json();
 
-  if (json.base_resp?.status_code !== 0) {
-    throw new Error(`MiniMax Voice API error: ${json.base_resp?.status_msg || 'Unknown error'}`);
+  if (json.output?.base_resp?.status_code !== 0) {
+    throw new Error(`Voice API error: ${json.output?.base_resp?.status_msg || 'Unknown error'}`);
   }
 
   const voices: MiniMaxVoice[] = [];
 
-  if (json.system_voice) {
-    for (const v of json.system_voice) {
+  if (json.output?.system_voice) {
+    for (const v of json.output.system_voice) {
       voices.push({
         voice_id: v.voice_id,
         voice_name: v.voice_name || v.voice_id,
@@ -241,8 +236,8 @@ export async function fetchMiniMaxVoices(apiKey: string, groupId?: string): Prom
     }
   }
 
-  if (json.voice_cloning) {
-    for (const v of json.voice_cloning) {
+  if (json.output?.voice_cloning) {
+    for (const v of json.output.voice_cloning) {
       voices.push({
         voice_id: v.voice_id,
         voice_name: v.voice_name || v.voice_id,
@@ -253,8 +248,8 @@ export async function fetchMiniMaxVoices(apiKey: string, groupId?: string): Prom
     }
   }
 
-  if (json.voice_generation) {
-    for (const v of json.voice_generation) {
+  if (json.output?.voice_generation) {
+    for (const v of json.output.voice_generation) {
       voices.push({
         voice_id: v.voice_id,
         voice_name: v.voice_name || v.voice_id,

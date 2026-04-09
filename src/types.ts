@@ -107,7 +107,7 @@ export interface MiniMaxRecording {
 }
 
 export const DEFAULT_MINIMAX_CONFIG: MiniMaxConfig = {
-  model: 'speech-2.8-hd',
+  model: 'MiniMax/speech-2.8-turbo',
   voiceId: '',
   voiceName: '',
   text: '',
