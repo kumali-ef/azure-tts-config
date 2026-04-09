@@ -5,3 +5,4 @@ audio/
 *.db-shm
 *.db-wal
 .env
+.superpowers/
