@@ -208,9 +208,12 @@ export async function fetchMiniMaxVoices(apiKey: string, groupId?: string): Prom
     : `${MINIMAX_API_BASE}/voice/list`;
 
   const response = await fetch(url, {
+    method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({}),
   });
 
   if (!response.ok) {
