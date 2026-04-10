@@ -141,3 +141,49 @@ export const DEFAULT_CONFIG: TtsConfig = {
   customVoiceMode: false,
   deploymentId: '',
 };
+
+// ── Qwen3 TTS Types ──
+
+export interface Qwen3Voice {
+  voice: string;
+  name: string;
+  gender: 'M' | 'F';
+  description: string;
+  supportedModels: string[];
+}
+
+export interface Qwen3Config {
+  model: string;
+  voice: string;
+  voiceDisplayName: string;
+  text: string;
+  languageType: string;
+  instructions: string;
+  optimizeInstructions: boolean;
+}
+
+export interface Qwen3Recording {
+  id: string;
+  model: string;
+  voice: string;
+  voice_display_name: string | null;
+  text: string;
+  language_type: string;
+  instructions: string | null;
+  optimize_instructions: number | null;
+  audio_filename: string;
+  api_response_time_ms: number | null;
+  stream_duration_ms: number | null;
+  created_at: string;
+  label: string | null;
+}
+
+export const DEFAULT_QWEN3_CONFIG: Qwen3Config = {
+  model: 'qwen3-tts-flash',
+  voice: '',
+  voiceDisplayName: '',
+  text: '',
+  languageType: 'Auto',
+  instructions: '',
+  optimizeInstructions: false,
+};
