@@ -204,8 +204,24 @@ export async function miniMaxSynthesizeStreaming(
     offset += chunk.byteLength;
   }
 
+  // DashScope SSE for MiniMax may send accumulated output (each event contains
+  // all audio up to that point) rather than incremental chunks. Detect this by
+  // checking if the last chunk alone is >= half the total — if so, the last
+  // chunk already contains the complete audio; use it instead of the concatenation.
+  let finalBuffer = fullBuffer;
+  if (audioChunks.length > 1) {
+    const lastChunkSize = audioChunks[audioChunks.length - 1].byteLength;
+    if (lastChunkSize >= totalLength / 2) {
+      console.warn(
+        `[MiniMax] Detected accumulated SSE output: ${audioChunks.length} chunks, ` +
+        `last chunk ${lastChunkSize}B of total ${totalLength}B — using last chunk only`
+      );
+      finalBuffer = new Uint8Array(audioChunks[audioChunks.length - 1]);
+    }
+  }
+
   // Play the full audio
-  const blob = new Blob([fullBuffer], { type: 'audio/mpeg' });
+  const blob = new Blob([finalBuffer], { type: 'audio/mpeg' });
   const audioUrl = URL.createObjectURL(blob);
   audioElement.src = audioUrl;
   audioElement.play();
@@ -213,7 +229,7 @@ export async function miniMaxSynthesizeStreaming(
   return {
     ttfbMs: ttfbMs || totalMs,
     totalMs,
-    buffer: fullBuffer.buffer as ArrayBuffer,
+    buffer: finalBuffer.buffer as ArrayBuffer,
   };
 }
 
