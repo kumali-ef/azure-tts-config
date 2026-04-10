@@ -23,7 +23,7 @@ export function useCartesiaRecordings() {
 
   const saveRecording = useCallback(async (audioBlob: Blob, config: Record<string, unknown>) => {
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.mp3');
+    formData.append('audio', audioBlob, 'audio.wav');
     formData.append('config', JSON.stringify(config));
 
     const res = await fetch('/api/cartesia/recordings', {

@@ -21,7 +21,7 @@ const CARTESIA_VERSION = '2026-03-01';
 
 function cartesiaHeaders(apiKey: string): Record<string, string> {
   return {
-    'X-API-Key': apiKey,
+    Authorization: `Bearer ${apiKey}`,
     'Cartesia-Version': CARTESIA_VERSION,
     'Content-Type': 'application/json',
   };
@@ -45,7 +45,7 @@ router.get('/voices', async (req: Request, res: Response) => {
 
       const response = await fetch(`${CARTESIA_API_URL}/voices?${params}`, {
         headers: {
-          'X-API-Key': apiKey,
+          Authorization: `Bearer ${apiKey}`,
           'Cartesia-Version': CARTESIA_VERSION,
         },
       });
@@ -106,7 +106,8 @@ router.post('/synthesize', async (req: Request, res: Response) => {
     }
 
     const audioBuffer = await response.arrayBuffer();
-    res.setHeader('Content-Type', 'audio/mpeg');
+    const upstreamContentType = response.headers.get('content-type') || 'application/octet-stream';
+    res.setHeader('Content-Type', upstreamContentType);
     res.setHeader('Content-Length', audioBuffer.byteLength.toString());
     res.send(Buffer.from(audioBuffer));
   } catch (err) {
@@ -174,7 +175,7 @@ router.post('/recordings', upload.single('audio'), (req: Request, res: Response)
 
     const config = JSON.parse(req.body.config);
     const id = uuidv4();
-    const audioFilename = `cartesia-${id}.mp3`;
+    const audioFilename = `cartesia-${id}.wav`;
     const audioPath = path.join(AUDIO_DIR, audioFilename);
 
     fs.writeFileSync(audioPath, req.file.buffer);
@@ -232,7 +233,9 @@ router.get('/recordings/:id/audio', (req: Request, res: Response) => {
     return;
   }
 
-  res.setHeader('Content-Type', 'audio/mpeg');
+  const ext = path.extname(recording.audio_filename).toLowerCase();
+  const mimeType = ext === '.wav' ? 'audio/wav' : 'audio/mpeg';
+  res.setHeader('Content-Type', mimeType);
   fs.createReadStream(audioPath).pipe(res);
 });
 

@@ -11,10 +11,12 @@ export interface CartesiaSynthesisParams {
   emotion?: string;
 }
 
-const MP3_OUTPUT_FORMAT = {
-  container: 'mp3',
-  bit_rate: 128000,
-  sample_rate: 44100,
+const CARTESIA_SAMPLE_RATE = 44100;
+
+const RAW_OUTPUT_FORMAT = {
+  container: 'raw',
+  encoding: 'pcm_f32le',
+  sample_rate: CARTESIA_SAMPLE_RATE,
 };
 
 function buildRequestBody(params: CartesiaSynthesisParams) {
@@ -22,7 +24,7 @@ function buildRequestBody(params: CartesiaSynthesisParams) {
     model_id: params.model,
     transcript: params.text,
     voice: { mode: 'id', id: params.voiceId },
-    output_format: MP3_OUTPUT_FORMAT,
+    output_format: RAW_OUTPUT_FORMAT,
   };
 
   if (params.language) {
@@ -50,6 +52,36 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer as ArrayBuffer;
 }
 
+function pcmFloat32ToWav(pcmBuffer: ArrayBuffer, sampleRate: number): ArrayBuffer {
+  const numChannels = 1;
+  const bitsPerSample = 32;
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = pcmBuffer.byteLength;
+  const wavBuffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(wavBuffer);
+
+  // RIFF header for IEEE float WAV.
+  view.setUint32(0, 0x52494646, false); // "RIFF"
+  view.setUint32(4, 36 + dataSize, true);
+  view.setUint32(8, 0x57415645, false); // "WAVE"
+
+  view.setUint32(12, 0x666d7420, false); // "fmt "
+  view.setUint32(16, 16, true); // PCM fmt chunk size
+  view.setUint16(20, 3, true); // 3 = IEEE float
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+
+  view.setUint32(36, 0x64617461, false); // "data"
+  view.setUint32(40, dataSize, true);
+  new Uint8Array(wavBuffer, 44).set(new Uint8Array(pcmBuffer));
+
+  return wavBuffer;
+}
+
 /** Non-streaming synthesis — server proxies to Cartesia /tts/bytes, returns raw audio */
 export async function cartesiaSynthesize(params: CartesiaSynthesisParams): Promise<ArrayBuffer> {
   const response = await fetch('/api/cartesia/synthesize', {
@@ -74,8 +106,9 @@ export async function cartesiaSynthesize(params: CartesiaSynthesisParams): Promi
   }
 
   const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('audio/')) {
-    return response.arrayBuffer();
+  if (contentType.includes('audio/') || contentType.includes('application/octet-stream')) {
+    const rawPcmBuffer = await response.arrayBuffer();
+    return pcmFloat32ToWav(rawPcmBuffer, CARTESIA_SAMPLE_RATE);
   }
 
   const json = await response.json();
@@ -170,8 +203,10 @@ export async function cartesiaSynthesizeStreaming(
     offset += chunk.byteLength;
   }
 
-  // Play the full audio
-  const blob = new Blob([fullBuffer], { type: 'audio/mpeg' });
+  const wavBuffer = pcmFloat32ToWav(fullBuffer.buffer as ArrayBuffer, CARTESIA_SAMPLE_RATE);
+
+  // Play the full audio as WAV after converting from raw PCM.
+  const blob = new Blob([wavBuffer], { type: 'audio/wav' });
   const audioUrl = URL.createObjectURL(blob);
   audioElement.src = audioUrl;
   audioElement.play();
@@ -179,7 +214,7 @@ export async function cartesiaSynthesizeStreaming(
   return {
     ttfbMs: ttfbMs || totalMs,
     totalMs,
-    buffer: fullBuffer.buffer as ArrayBuffer,
+    buffer: wavBuffer,
   };
 }
 

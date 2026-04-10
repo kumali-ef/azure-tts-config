@@ -89,7 +89,7 @@ export function CartesiaApp() {
       const startTime = performance.now();
       const audioBuffer = await cartesiaSynthesize(buildParams());
       const apiResponseTimeMs = Math.round(performance.now() - startTime);
-      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+      const blob = new Blob([audioBuffer], { type: 'audio/wav' });
       const url = URL.createObjectURL(blob);
       if (audioRef.current) {
         audioRef.current.src = url;
@@ -109,7 +109,7 @@ export function CartesiaApp() {
     setError(null);
     try {
       const { ttfbMs, totalMs, buffer } = await cartesiaSynthesizeStreaming(buildParams(), audioRef.current);
-      const blob = new Blob([buffer], { type: 'audio/mpeg' });
+      const blob = new Blob([buffer], { type: 'audio/wav' });
       await saveRecording(blob, buildSaveConfig(ttfbMs, totalMs));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Streaming synthesis failed');
