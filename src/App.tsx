@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { AzureApp } from './AzureApp';
 import { MiniMaxApp } from './MiniMaxApp';
+import { Qwen3App } from './Qwen3App';
 
-type Tab = 'azure' | 'minimax';
+type Tab = 'azure' | 'minimax' | 'qwen3';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('azure');
@@ -32,10 +33,20 @@ function App() {
           >
             MiniMax TTS
           </button>
+          <button
+            onClick={() => setActiveTab('qwen3')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'qwen3'
+                ? 'border-teal-500 text-teal-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Qwen3 TTS
+          </button>
         </nav>
       </header>
 
-      {activeTab === 'azure' ? <AzureApp /> : <MiniMaxApp />}
+      {activeTab === 'azure' ? <AzureApp /> : activeTab === 'minimax' ? <MiniMaxApp /> : <Qwen3App />}
     </div>
   );
 }
