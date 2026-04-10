@@ -8,6 +8,7 @@ interface Props {
   onPlay: (id: string) => void;
   onDelete: (id: string) => void;
   onLoad: (rec: MiniMaxRecording) => void;
+  onShowCode: (rec: MiniMaxRecording) => void;
 }
 
 function modelBadge(model: string) {
@@ -18,7 +19,7 @@ function modelBadge(model: string) {
   return { label: model, color: 'bg-gray-500' };
 }
 
-export function MiniMaxRecordingsList({ recordings, loading, error, onPlay, onDelete, onLoad }: Props) {
+export function MiniMaxRecordingsList({ recordings, loading, error, onPlay, onDelete, onLoad, onShowCode }: Props) {
   const [filter, setFilter] = useState('');
 
   const filtered = recordings.filter((rec) => {
@@ -91,6 +92,11 @@ export function MiniMaxRecordingsList({ recordings, loading, error, onPlay, onDe
                     className="px-2 py-1 text-xs bg-gray-100 hover:bg-red-100 text-red-500 rounded"
                     title="Delete"
                   >🗑</button>
+                  <button
+                    onClick={() => onShowCode(rec)}
+                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                    title="Show config JSON"
+                  >{'{}'}</button>
                 </div>
               </div>
             </div>

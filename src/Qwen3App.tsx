@@ -7,6 +7,7 @@ import { useQwen3Recordings } from './hooks/useQwen3Recordings';
 import { qwen3Synthesize, qwen3SynthesizeStreaming } from './utils/qwen3-tts';
 import type { Qwen3SynthesisParams } from './utils/qwen3-tts';
 import { Accordion } from './components/Accordion';
+import { ShowJsonModal } from './components/ShowJsonModal';
 import { Qwen3Settings } from './components/qwen3/Qwen3Settings';
 import { Qwen3ModelSelector } from './components/qwen3/Qwen3ModelSelector';
 import { Qwen3VoiceSelector } from './components/qwen3/Qwen3VoiceSelector';
@@ -35,6 +36,7 @@ export function Qwen3App() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [codeModalJson, setCodeModalJson] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const updateConfig = useCallback((updates: Partial<Qwen3Config>) => {
@@ -64,6 +66,16 @@ export function Qwen3App() {
   });
 
   const canSynthesize = isConfigured && !!config.text && !!config.voice;
+
+  const configToJson = (cfg: Qwen3Config) => JSON.stringify({
+    model: cfg.model,
+    voice: cfg.voice,
+    voiceDisplayName: cfg.voiceDisplayName,
+    text: cfg.text,
+    languageType: cfg.languageType,
+    instructions: cfg.instructions || undefined,
+    optimizeInstructions: cfg.instructions ? cfg.optimizeInstructions : undefined,
+  }, null, 2);
 
   const handleSynthesize = async () => {
     if (!canSynthesize) return;
@@ -182,6 +194,12 @@ export function Qwen3App() {
           >
             {isStreaming ? '⏳ Streaming...' : '📡 Stream & Play'}
           </button>
+          <button
+            onClick={() => setCodeModalJson(configToJson(config))}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold text-sm hover:bg-gray-700 transition-colors"
+          >
+            Show Code
+          </button>
         </div>
 
         {error && (
@@ -206,10 +224,19 @@ export function Qwen3App() {
           onPlay={handlePlayRecording}
           onDelete={deleteRecording}
           onLoad={handleLoadRecording}
+          onShowCode={(rec) => setCodeModalJson(configToJson(recordingToConfig(rec)))}
         />
       </div>
 
       <audio ref={audioRef} />
+
+      {codeModalJson && (
+        <ShowJsonModal
+          json={codeModalJson}
+          buttonClassName="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
+          onClose={() => setCodeModalJson(null)}
+        />
+      )}
     </div>
   );
 }

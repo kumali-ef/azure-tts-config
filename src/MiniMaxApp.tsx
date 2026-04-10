@@ -7,6 +7,7 @@ import { useMiniMaxRecordings } from './hooks/useMiniMaxRecordings';
 import { miniMaxSynthesize, miniMaxSynthesizeStreaming } from './utils/minimax-tts';
 import type { MiniMaxSynthesisParams } from './utils/minimax-tts';
 import { Accordion } from './components/Accordion';
+import { ShowJsonModal } from './components/ShowJsonModal';
 import { MiniMaxSettings } from './components/minimax/MiniMaxSettings';
 import { ModelSelector } from './components/minimax/ModelSelector';
 import { MiniMaxVoiceSelector } from './components/minimax/MiniMaxVoiceSelector';
@@ -43,6 +44,7 @@ export function MiniMaxApp() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [codeModalJson, setCodeModalJson] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const updateConfig = useCallback((updates: Partial<MiniMaxConfig>) => {
@@ -83,6 +85,21 @@ export function MiniMaxApp() {
 
   const effectiveVoiceId = config.useCustomVoice ? config.customVoiceId : config.voiceId;
   const canSynthesize = isConfigured && !!config.text && !!effectiveVoiceId;
+
+  const configToJson = (cfg: MiniMaxConfig) => JSON.stringify({
+    model: cfg.model,
+    voiceId: cfg.useCustomVoice ? cfg.customVoiceId : cfg.voiceId,
+    voiceName: cfg.useCustomVoice ? cfg.customVoiceId : cfg.voiceName,
+    text: cfg.text,
+    speed: cfg.speed,
+    vol: cfg.vol,
+    pitch: cfg.pitch,
+    emotion: cfg.emotion || undefined,
+    languageBoost: cfg.languageBoost || undefined,
+    voiceModifyTimbre: cfg.voiceModifyTimbre || undefined,
+    voiceModifyIntensity: cfg.voiceModifyIntensity || undefined,
+    voiceModifySoundEffect: cfg.voiceModifySoundEffect || undefined,
+  }, null, 2);
 
   const handleSynthesize = async () => {
     if (!canSynthesize) return;
@@ -228,6 +245,12 @@ export function MiniMaxApp() {
           >
             {isStreaming ? '⏳ Streaming...' : '📡 Stream & Play'}
           </button>
+          <button
+            onClick={() => setCodeModalJson(configToJson(config))}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold text-sm hover:bg-gray-700 transition-colors"
+          >
+            Show Code
+          </button>
         </div>
 
         {error && (
@@ -252,10 +275,19 @@ export function MiniMaxApp() {
           onPlay={handlePlayRecording}
           onDelete={deleteRecording}
           onLoad={handleLoadRecording}
+          onShowCode={(rec) => setCodeModalJson(configToJson(recordingToConfig(rec)))}
         />
       </div>
 
       <audio ref={audioRef} />
+
+      {codeModalJson && (
+        <ShowJsonModal
+          json={codeModalJson}
+          buttonClassName="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 transition-colors"
+          onClose={() => setCodeModalJson(null)}
+        />
+      )}
     </div>
   );
 }
