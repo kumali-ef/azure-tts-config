@@ -187,3 +187,53 @@ export const DEFAULT_QWEN3_CONFIG: Qwen3Config = {
   instructions: '',
   optimizeInstructions: false,
 };
+
+// ── Cartesia TTS Types ──
+
+export interface CartesiaVoice {
+  id: string;
+  name: string;
+  description: string;
+  language: string;
+  gender: string;
+  is_owner: boolean;
+}
+
+export interface CartesiaConfig {
+  model: string;
+  voiceId: string;
+  voiceName: string;
+  text: string;
+  language: string;
+  speed: number;
+  volume: number;
+  emotion: string;
+}
+
+export interface CartesiaRecording {
+  id: string;
+  model: string;
+  voice_id: string;
+  voice_name: string | null;
+  text: string;
+  language: string | null;
+  speed: number | null;
+  volume: number | null;
+  emotion: string | null;
+  audio_filename: string;
+  api_response_time_ms: number | null;
+  stream_duration_ms: number | null;
+  created_at: string;
+  label: string | null;
+}
+
+export const DEFAULT_CARTESIA_CONFIG: CartesiaConfig = {
+  model: 'sonic-3',
+  voiceId: '',
+  voiceName: '',
+  text: '',
+  language: '',
+  speed: 1.0,
+  volume: 1.0,
+  emotion: '',
+};

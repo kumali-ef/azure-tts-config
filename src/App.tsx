@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { AzureApp } from './AzureApp';
 import { MiniMaxApp } from './MiniMaxApp';
 import { Qwen3App } from './Qwen3App';
+import { CartesiaApp } from './CartesiaApp';
 
-type Tab = 'azure' | 'minimax' | 'qwen3';
+type Tab = 'azure' | 'minimax' | 'qwen3' | 'cartesia';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('azure');
@@ -43,10 +44,20 @@ function App() {
           >
             Qwen3 TTS
           </button>
+          <button
+            onClick={() => setActiveTab('cartesia')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'cartesia'
+                ? 'border-lime-500 text-lime-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Cartesia TTS
+          </button>
         </nav>
       </header>
 
-      {activeTab === 'azure' ? <AzureApp /> : activeTab === 'minimax' ? <MiniMaxApp /> : <Qwen3App />}
+      {activeTab === 'azure' ? <AzureApp /> : activeTab === 'minimax' ? <MiniMaxApp /> : activeTab === 'qwen3' ? <Qwen3App /> : <CartesiaApp />}
     </div>
   );
 }
