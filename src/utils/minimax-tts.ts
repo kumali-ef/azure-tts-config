@@ -1,7 +1,5 @@
 import type { MiniMaxVoice } from '../types';
 
-const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
-
 export interface MiniMaxSynthesisParams {
   apiKey: string;
   model: string;
@@ -70,18 +68,31 @@ function hexToArrayBuffer(hex: string): ArrayBuffer {
 
 /** Synchronous synthesis — returns full audio buffer */
 export async function miniMaxSynthesize(params: MiniMaxSynthesisParams): Promise<ArrayBuffer> {
-  const response = await fetch(DASHSCOPE_API_URL, {
+  const response = await fetch('/api/minimax/synthesize', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${params.apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(buildRequestBody(params)),
+    body: JSON.stringify({
+      apiKey: params.apiKey,
+      body: buildRequestBody(params),
+    }),
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`MiniMax API error (${response.status}): ${text}`);
+    let message = `MiniMax API error (${response.status})`;
+    try {
+      const errJson = await response.json();
+      const upstreamCode = errJson?.upstreamCode ? ` [${errJson.upstreamCode}]` : '';
+      const upstreamMessage = errJson?.upstreamMessage;
+      message = upstreamMessage
+        ? `${errJson?.error || message}${upstreamCode}: ${upstreamMessage}`
+        : (errJson?.error || message);
+    } catch {
+      const text = await response.text();
+      if (text) message = `${message}: ${text}`;
+    }
+    throw new Error(message);
   }
 
   const json = await response.json();
@@ -111,19 +122,31 @@ export async function miniMaxSynthesizeStreaming(
   const startTime = performance.now();
   let ttfbMs = 0;
 
-  const response = await fetch(DASHSCOPE_API_URL, {
+  const response = await fetch('/api/minimax/synthesize-stream', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${params.apiKey}`,
       'Content-Type': 'application/json',
-      'X-DashScope-SSE': 'enable',
     },
-    body: JSON.stringify(buildRequestBody(params)),
+    body: JSON.stringify({
+      apiKey: params.apiKey,
+      body: buildRequestBody(params),
+    }),
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`MiniMax API error (${response.status}): ${text}`);
+    let message = `MiniMax streaming API error (${response.status})`;
+    try {
+      const errJson = await response.json();
+      const upstreamCode = errJson?.upstreamCode ? ` [${errJson.upstreamCode}]` : '';
+      const upstreamMessage = errJson?.upstreamMessage;
+      message = upstreamMessage
+        ? `${errJson?.error || message}${upstreamCode}: ${upstreamMessage}`
+        : (errJson?.error || message);
+    } catch {
+      const text = await response.text();
+      if (text) message = `${message}: ${text}`;
+    }
+    throw new Error(message);
   }
 
   if (!response.body) {
@@ -196,24 +219,31 @@ export async function miniMaxSynthesizeStreaming(
 
 /** Fetch available voices from Aliyun DashScope Voice Management API */
 export async function fetchMiniMaxVoices(apiKey: string): Promise<MiniMaxVoice[]> {
-  const response = await fetch(DASHSCOPE_API_URL, {
+  const response = await fetch('/api/minimax/voices', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      apiKey,
       model: 'MiniMax/speech-2.8-turbo',
-      input: {
-        action: 'get_voice',
-        voice_type: 'all',
-      },
     }),
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Voice API error (${response.status}): ${text}`);
+    let message = `Voice API error (${response.status})`;
+    try {
+      const errJson = await response.json();
+      const upstreamCode = errJson?.upstreamCode ? ` [${errJson.upstreamCode}]` : '';
+      const upstreamMessage = errJson?.upstreamMessage || errJson?.details?.output?.base_resp?.status_msg;
+      message = upstreamMessage
+        ? `${errJson?.error || message}${upstreamCode}: ${upstreamMessage}`
+        : (errJson?.error || message);
+    } catch {
+      const text = await response.text();
+      if (text) message = `${message}: ${text}`;
+    }
+    throw new Error(message);
   }
 
   const json = await response.json();

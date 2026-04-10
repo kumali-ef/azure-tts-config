@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import {
   insertMiniMaxRecording,
@@ -14,6 +15,181 @@ import { AUDIO_DIR } from './db';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
+
+interface DashScopeProxyBody {
+  apiKey?: string;
+  body?: unknown;
+}
+
+async function forwardToDashScope(
+  req: Request,
+  res: Response,
+  options: { streaming: boolean }
+) {
+  const payload = req.body as DashScopeProxyBody;
+  const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
+  const body = payload?.body;
+
+  if (!apiKey) {
+    res.status(400).json({ error: 'Missing apiKey' });
+    return;
+  }
+  if (!body || typeof body !== 'object') {
+    res.status(400).json({ error: 'Missing request body' });
+    return;
+  }
+
+  try {
+    const response = await fetch(DASHSCOPE_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...(options.streaming ? { 'X-DashScope-SSE': 'enable' } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (options.streaming) {
+      if (!response.ok) {
+        const text = await response.text();
+        let json: any = null;
+        try {
+          json = text ? JSON.parse(text) : null;
+        } catch {
+          json = null;
+        }
+
+        res.status(response.status).json({
+          error: `DashScope streaming API request failed (${response.status})`,
+          upstreamCode: json?.code || json?.output?.base_resp?.status_code,
+          upstreamMessage:
+            json?.message || json?.msg || json?.output?.base_resp?.status_msg || text || 'Unknown error',
+        });
+        return;
+      }
+
+      if (!response.body) {
+        res.status(502).json({ error: 'DashScope streaming API returned no body' });
+        return;
+      }
+
+      res.status(200);
+      res.setHeader('Content-Type', response.headers.get('content-type') || 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      Readable.fromWeb(response.body as unknown as ReadableStream).pipe(res);
+      return;
+    }
+
+    const text = await response.text();
+    let json: any = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = null;
+    }
+
+    if (!response.ok) {
+      res.status(response.status).json({
+        error: `DashScope synthesis API request failed (${response.status})`,
+        upstreamCode: json?.code || json?.output?.base_resp?.status_code,
+        upstreamMessage:
+          json?.message || json?.msg || json?.output?.base_resp?.status_msg || text || 'Unknown error',
+      });
+      return;
+    }
+
+    if (json !== null) {
+      res.json(json);
+      return;
+    }
+
+    res.type('application/json').send(text);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to call DashScope API';
+    res.status(500).json({ error: message });
+  }
+}
+
+// POST /api/minimax/synthesize — Proxy normal synthesis to DashScope to avoid browser CORS issues
+router.post('/synthesize', async (req: Request, res: Response) => {
+  await forwardToDashScope(req, res, { streaming: false });
+});
+
+// POST /api/minimax/synthesize-stream — Proxy streaming synthesis to DashScope to avoid browser CORS issues
+router.post('/synthesize-stream', async (req: Request, res: Response) => {
+  await forwardToDashScope(req, res, { streaming: true });
+});
+
+// POST /api/minimax/voices — Proxy voice list request to DashScope to avoid browser CORS issues
+router.post('/voices', async (req: Request, res: Response) => {
+  const apiKey = typeof req.body?.apiKey === 'string' ? req.body.apiKey.trim() : '';
+  const model = typeof req.body?.model === 'string' ? req.body.model : 'MiniMax/speech-2.8-turbo';
+
+  if (!apiKey) {
+    res.status(400).json({ error: 'Missing apiKey' });
+    return;
+  }
+
+  try {
+    const response = await fetch(DASHSCOPE_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        input: {
+          action: 'get_voice',
+          voice_type: 'all',
+        },
+      }),
+    });
+
+    const text = await response.text();
+    let json: any = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = null;
+    }
+
+    if (!response.ok) {
+      const upstreamCode = json?.code || json?.output?.base_resp?.status_code;
+      const upstreamMessage =
+        json?.message ||
+        json?.msg ||
+        json?.output?.base_resp?.status_msg ||
+        text ||
+        'DashScope voice API request failed';
+
+      res.status(response.status).json({
+        error: `DashScope voice API request failed (${response.status})`,
+        upstreamCode,
+        upstreamMessage,
+      });
+      return;
+    }
+
+    if (json?.output?.base_resp?.status_code !== 0) {
+      res.status(502).json({
+        error: 'DashScope returned an error',
+        upstreamCode: json?.output?.base_resp?.status_code,
+        upstreamMessage: json?.output?.base_resp?.status_msg || 'Unknown error',
+      });
+      return;
+    }
+
+    res.json(json);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch voices from DashScope';
+    res.status(500).json({ error: message });
+  }
+});
 
 // POST /api/minimax/recordings — Save recording
 router.post('/recordings', upload.single('audio'), (req: Request, res: Response) => {
