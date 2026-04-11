@@ -104,8 +104,8 @@ export function Qwen3App() {
     setIsStreaming(true);
     setError(null);
     try {
-      const { ttfbMs, totalMs, buffer } = await qwen3SynthesizeStreaming(buildParams(), audioRef.current);
-      const blob = new Blob([buffer], { type: 'audio/mpeg' });
+      const { ttfbMs, totalMs, buffer, mimeType } = await qwen3SynthesizeStreaming(buildParams(), audioRef.current);
+      const blob = new Blob([buffer], { type: mimeType });
       await saveRecording(blob, buildSaveConfig(ttfbMs, totalMs));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Streaming synthesis failed');

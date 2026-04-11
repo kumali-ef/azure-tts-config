@@ -94,6 +94,52 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer as ArrayBuffer;
 }
 
+/** Detect audio format from first bytes */
+function detectAudioFormat(data: Uint8Array): 'mp3' | 'pcm' {
+  if (data.length < 3) return 'pcm';
+  // MP3 frame sync: 0xFF followed by 0xE0+ (11 sync bits set)
+  if (data[0] === 0xFF && (data[1] & 0xE0) === 0xE0) return 'mp3';
+  // ID3 tag header (MP3 with metadata)
+  if (data[0] === 0x49 && data[1] === 0x44 && data[2] === 0x33) return 'mp3';
+  return 'pcm';
+}
+
+/** Wrap raw PCM samples in a WAV container for browser playback.
+ *  DashScope Qwen3-TTS streaming returns 24kHz, 16-bit, mono PCM. */
+function wrapPcmInWav(
+  pcmData: Uint8Array,
+  sampleRate = 24000,
+  channels = 1,
+  bitsPerSample = 16,
+): Uint8Array {
+  const dataLength = pcmData.byteLength;
+  const headerLength = 44;
+  const wav = new Uint8Array(headerLength + dataLength);
+  const view = new DataView(wav.buffer);
+
+  // RIFF header
+  wav.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
+  view.setUint32(4, headerLength + dataLength - 8, true);
+  wav.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
+
+  // fmt chunk
+  wav.set([0x66, 0x6D, 0x74, 0x20], 12); // "fmt "
+  view.setUint32(16, 16, true); // chunk size
+  view.setUint16(20, 1, true);  // PCM format
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * channels * (bitsPerSample / 8), true);
+  view.setUint16(32, channels * (bitsPerSample / 8), true);
+  view.setUint16(34, bitsPerSample, true);
+
+  // data chunk
+  wav.set([0x64, 0x61, 0x74, 0x61], 36); // "data"
+  view.setUint32(40, dataLength, true);
+  wav.set(pcmData, headerLength);
+
+  return wav;
+}
+
 /** Non-streaming synthesis — server downloads audio from DashScope URL, returns raw bytes */
 export async function qwen3Synthesize(params: Qwen3SynthesisParams): Promise<ArrayBuffer> {
   const response = await fetch('/api/qwen3/synthesize', {
@@ -136,6 +182,7 @@ export interface StreamingResult {
   ttfbMs: number;
   totalMs: number;
   buffer: ArrayBuffer;
+  mimeType: string;
 }
 
 /** Streaming synthesis — parses base64 SSE chunks, returns metrics + full buffer */
@@ -228,8 +275,26 @@ export async function qwen3SynthesizeStreaming(
     offset += chunk.byteLength;
   }
 
+  // DashScope Qwen3-TTS streaming may return raw PCM (24kHz, 16-bit, mono)
+  // or MP3 depending on the model. Detect format and wrap PCM in WAV if needed.
+  const format = detectAudioFormat(fullBuffer);
+  console.log(
+    `[Qwen3] Streaming audio: ${audioChunks.length} chunks, ${totalLength} bytes, ` +
+    `format=${format}, first bytes=[${Array.from(fullBuffer.slice(0, 8)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(', ')}]`
+  );
+
+  let playBuffer: Uint8Array;
+  let mimeType: string;
+  if (format === 'pcm') {
+    playBuffer = wrapPcmInWav(fullBuffer);
+    mimeType = 'audio/wav';
+  } else {
+    playBuffer = fullBuffer;
+    mimeType = 'audio/mpeg';
+  }
+
   // Play the full audio
-  const blob = new Blob([fullBuffer], { type: 'audio/mpeg' });
+  const blob = new Blob([playBuffer.buffer as ArrayBuffer], { type: mimeType });
   const audioUrl = URL.createObjectURL(blob);
   audioElement.src = audioUrl;
   audioElement.play();
@@ -237,6 +302,7 @@ export async function qwen3SynthesizeStreaming(
   return {
     ttfbMs: ttfbMs || totalMs,
     totalMs,
-    buffer: fullBuffer.buffer as ArrayBuffer,
+    buffer: playBuffer.buffer as ArrayBuffer,
+    mimeType,
   };
 }
