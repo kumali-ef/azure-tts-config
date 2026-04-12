@@ -15,10 +15,20 @@ import { AUDIO_DIR } from './db';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
-const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
+const DASHSCOPE_BASE_URLS: Record<string, string> = {
+  'cn-beijing': 'https://dashscope.aliyuncs.com/api/v1',
+  'intl-singapore': 'https://dashscope-intl.aliyuncs.com/api/v1',
+};
+const API_PATH = '/services/aigc/multimodal-generation/generation';
+
+function getDashScopeUrl(region?: string): string {
+  const base = DASHSCOPE_BASE_URLS[region || 'cn-beijing'] || DASHSCOPE_BASE_URLS['cn-beijing'];
+  return base + API_PATH;
+}
 
 interface DashScopeProxyBody {
   apiKey?: string;
+  region?: string;
   body?: unknown;
 }
 
@@ -29,6 +39,7 @@ async function forwardToDashScope(
 ) {
   const payload = req.body as DashScopeProxyBody;
   const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
+  const region = typeof payload?.region === 'string' ? payload.region : undefined;
   const body = payload?.body;
 
   if (!apiKey) {
@@ -41,7 +52,7 @@ async function forwardToDashScope(
   }
 
   try {
-    const response = await fetch(DASHSCOPE_API_URL, {
+    const response = await fetch(getDashScopeUrl(region), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -127,6 +138,7 @@ router.post('/synthesize-stream', async (req: Request, res: Response) => {
 // POST /api/minimax/voices — Proxy voice list request to DashScope to avoid browser CORS issues
 router.post('/voices', async (req: Request, res: Response) => {
   const apiKey = typeof req.body?.apiKey === 'string' ? req.body.apiKey.trim() : '';
+  const region = typeof req.body?.region === 'string' ? req.body.region : undefined;
   const model = typeof req.body?.model === 'string' ? req.body.model : 'MiniMax/speech-2.8-turbo';
 
   if (!apiKey) {
@@ -135,7 +147,7 @@ router.post('/voices', async (req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(DASHSCOPE_API_URL, {
+    const response = await fetch(getDashScopeUrl(region), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,

@@ -2,6 +2,7 @@ import type { MiniMaxVoice } from '../types';
 
 export interface MiniMaxSynthesisParams {
   apiKey: string;
+  region?: string;
   model: string;
   text: string;
   voiceId: string;
@@ -75,6 +76,7 @@ export async function miniMaxSynthesize(params: MiniMaxSynthesisParams): Promise
     },
     body: JSON.stringify({
       apiKey: params.apiKey,
+      region: params.region,
       body: buildRequestBody(params),
     }),
   });
@@ -129,6 +131,7 @@ export async function miniMaxSynthesizeStreaming(
     },
     body: JSON.stringify({
       apiKey: params.apiKey,
+      region: params.region,
       body: buildRequestBody(params),
     }),
   });
@@ -234,7 +237,7 @@ export async function miniMaxSynthesizeStreaming(
 }
 
 /** Fetch available voices from Aliyun DashScope Voice Management API */
-export async function fetchMiniMaxVoices(apiKey: string): Promise<MiniMaxVoice[]> {
+export async function fetchMiniMaxVoices(apiKey: string, region?: string): Promise<MiniMaxVoice[]> {
   const response = await fetch('/api/minimax/voices', {
     method: 'POST',
     headers: {
@@ -242,6 +245,7 @@ export async function fetchMiniMaxVoices(apiKey: string): Promise<MiniMaxVoice[]
     },
     body: JSON.stringify({
       apiKey,
+      region,
       model: 'MiniMax/speech-2.8-turbo',
     }),
   });

@@ -28,7 +28,7 @@ function recordingToConfig(rec: Qwen3Recording): Qwen3Config {
 }
 
 export function Qwen3App() {
-  const { apiKey, setApiKey, isConfigured } = useQwen3Settings();
+  const { region, setRegion, apiKey, setApiKey, isConfigured } = useQwen3Settings();
   const [config, setConfig] = useState<Qwen3Config>(DEFAULT_QWEN3_CONFIG);
   const { voices } = useQwen3Voices(config.model);
   const { recordings, loading: recsLoading, error: recsError, saveRecording, deleteRecording } = useQwen3Recordings();
@@ -45,6 +45,7 @@ export function Qwen3App() {
 
   const buildParams = (): Qwen3SynthesisParams => ({
     apiKey,
+    region,
     model: config.model,
     text: config.text,
     voice: config.voice,
@@ -132,7 +133,7 @@ export function Qwen3App() {
       {/* Left Panel - Configuration */}
       <div className="w-1/2 overflow-y-auto p-4 space-y-3 border-r">
         <Accordion title="Qwen3@Aliyun">
-          <Qwen3Settings apiKey={apiKey} onApiKeyChange={setApiKey} />
+          <Qwen3Settings region={region} onRegionChange={setRegion} apiKey={apiKey} onApiKeyChange={setApiKey} />
         </Accordion>
 
         <Accordion title="Model">

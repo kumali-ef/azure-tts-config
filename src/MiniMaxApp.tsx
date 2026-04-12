@@ -36,8 +36,8 @@ function recordingToConfig(rec: MiniMaxRecording): MiniMaxConfig {
 }
 
 export function MiniMaxApp() {
-  const { apiKey, setApiKey, isConfigured } = useMiniMaxSettings();
-  const { voices, loading: voicesLoading, error: voicesError, retry } = useMiniMaxVoices(apiKey);
+  const { region, setRegion, apiKey, setApiKey, isConfigured } = useMiniMaxSettings();
+  const { voices, loading: voicesLoading, error: voicesError, retry } = useMiniMaxVoices(apiKey, region);
   const { recordings, loading: recsLoading, error: recsError, saveRecording, deleteRecording } = useMiniMaxRecordings();
 
   const [config, setConfig] = useState<MiniMaxConfig>(DEFAULT_MINIMAX_CONFIG);
@@ -53,6 +53,7 @@ export function MiniMaxApp() {
 
   const buildParams = (): MiniMaxSynthesisParams => ({
     apiKey,
+    region,
     model: config.model,
     text: config.text,
     voiceId: config.useCustomVoice ? config.customVoiceId : config.voiceId,
@@ -159,6 +160,8 @@ export function MiniMaxApp() {
           <MiniMaxSettings
             apiKey={apiKey}
             onApiKeyChange={setApiKey}
+            region={region}
+            onRegionChange={setRegion}
           />
         </Accordion>
 

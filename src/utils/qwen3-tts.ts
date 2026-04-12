@@ -53,6 +53,7 @@ export const QWEN3_VOICES: Qwen3Voice[] = [
 
 export interface Qwen3SynthesisParams {
   apiKey: string;
+  region?: string;
   model: string;
   text: string;
   voice: string;
@@ -147,6 +148,7 @@ export async function qwen3Synthesize(params: Qwen3SynthesisParams): Promise<Arr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       apiKey: params.apiKey,
+      region: params.region,
       body: buildRequestBody(params),
     }),
   });
@@ -198,6 +200,7 @@ export async function qwen3SynthesizeStreaming(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       apiKey: params.apiKey,
+      region: params.region,
       body: buildRequestBody(params),
     }),
   });
