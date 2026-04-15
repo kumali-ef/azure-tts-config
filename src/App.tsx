@@ -54,6 +54,14 @@ function App() {
           >
             Cartesia TTS
           </button>
+          <a
+            href="https://playground.deepgram.com/?endpoint=speak&architecture=aura-2&language=en"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Aura2(Deepgram) ↗
+          </a>
         </nav>
       </header>
 
