@@ -291,3 +291,48 @@ export const DEFAULT_ELEVENLABS_CONFIG: ElevenLabsConfig = {
   useSpeakerBoost: true,
   speed: 1.0,
 };
+
+// ── Inworld TTS Types ──
+
+export interface InworldVoice {
+  voiceId: string;
+  name: string;
+  displayName: string;
+  description: string;
+  langCode: string;
+  tags: string[];
+  source: string;
+}
+
+export interface InworldConfig {
+  model: string;
+  voiceId: string;
+  voiceName: string;
+  text: string;
+  temperature: number;
+  applyTextNormalization: string;
+}
+
+export interface InworldRecording {
+  id: string;
+  model: string;
+  voice_id: string;
+  voice_name: string | null;
+  text: string;
+  temperature: number | null;
+  apply_text_normalization: string | null;
+  audio_filename: string;
+  api_response_time_ms: number | null;
+  stream_duration_ms: number | null;
+  created_at: string;
+  label: string | null;
+}
+
+export const DEFAULT_INWORLD_CONFIG: InworldConfig = {
+  model: 'inworld-tts-1.5-max',
+  voiceId: '',
+  voiceName: '',
+  text: '',
+  temperature: 1.0,
+  applyTextNormalization: 'APPLY_TEXT_NORMALIZATION_UNSPECIFIED',
+};
