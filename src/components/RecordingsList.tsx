@@ -157,37 +157,32 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDownload,
                 </p>
               </div>
 
-              <div className="flex flex-col gap-1">
+              <div className="flex gap-1 ml-2">
                 <button
                   onClick={() => onPlay(rec.id)}
-                  className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
-                >
-                  ▶ Play
-                </button>
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  title="Play"
+                >▶</button>
                 <button
                   onClick={() => onDownload(rec.id)}
-                  className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs hover:bg-indigo-200 transition-colors"
-                >
-                  ⬇ Download
-                </button>
-                <button
-                  onClick={() => onDelete(rec.id)}
-                  className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition-colors"
-                >
-                  Delete
-                </button>
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  title="Download"
+                >⬇</button>
                 <button
                   onClick={() => onLoad(rec)}
-                  className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition-colors"
-                >
-                  Load config
-                </button>
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  title="Load config"
+                >↩</button>
+                <button
+                  onClick={() => onDelete(rec.id)}
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-red-100 text-red-500 rounded"
+                  title="Delete"
+                >🗑</button>
                 <button
                   onClick={() => onShowCode(rec)}
-                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors"
-                >
-                  Code
-                </button>
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  title="Show config JSON"
+                >{'{}'}</button>
               </div>
             </div>
           </div>
