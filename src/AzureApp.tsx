@@ -9,6 +9,7 @@ import { synthesizeSpeech, synthesizeSpeechStreaming } from './utils/azure-tts';
 import {
   getStoredDeploymentId, setStoredDeploymentId,
   getStoredCustomVoiceName, setStoredCustomVoiceName,
+  sanitizeFilename,
 } from './utils/storage';
 import { Accordion } from './components/Accordion';
 import { AzureSettings } from './components/AzureSettings';
@@ -192,6 +193,18 @@ export function AzureApp() {
     }
   };
 
+  const handleDownloadRecording = (id: string) => {
+    const rec = recordings.find((r) => r.id === id);
+    if (!rec) return;
+    const voiceName = sanitizeFilename(rec.voice_display_name || rec.voice_name);
+    const a = document.createElement('a');
+    a.href = `/api/recordings/${id}/audio`;
+    a.download = `azure-${voiceName}-${id}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleLoadRecording = (rec: Recording) => {
     const newConfig = recordingToConfig(rec);
     setConfig(newConfig);
@@ -326,6 +339,7 @@ export function AzureApp() {
             loading={recsLoading}
             error={recsError}
             onPlay={handlePlayRecording}
+            onDownload={handleDownloadRecording}
             onDelete={deleteRecording}
             onShowCode={(rec) => setCodeModalConfig(recordingToConfig(rec))}
             onLoad={handleLoadRecording}

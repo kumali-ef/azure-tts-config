@@ -6,6 +6,7 @@ import { useMiniMaxVoices } from './hooks/useMiniMaxVoices';
 import { useMiniMaxRecordings } from './hooks/useMiniMaxRecordings';
 import { miniMaxSynthesize, miniMaxSynthesizeStreaming } from './utils/minimax-tts';
 import type { MiniMaxSynthesisParams } from './utils/minimax-tts';
+import { sanitizeFilename } from './utils/storage';
 import { Accordion } from './components/Accordion';
 import { ShowJsonModal } from './components/ShowJsonModal';
 import { MiniMaxSettings } from './components/minimax/MiniMaxSettings';
@@ -146,6 +147,18 @@ export function MiniMaxApp() {
     }
   };
 
+  const handleDownloadRecording = (id: string) => {
+    const rec = recordings.find((r) => r.id === id);
+    if (!rec) return;
+    const voiceName = sanitizeFilename(rec.voice_name || rec.voice_id);
+    const a = document.createElement('a');
+    a.href = `/api/minimax/recordings/${id}/audio`;
+    a.download = `minimax-${voiceName}-${id}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleLoadRecording = (rec: MiniMaxRecording) => {
     setConfig(recordingToConfig(rec));
   };
@@ -276,6 +289,7 @@ export function MiniMaxApp() {
           loading={recsLoading}
           error={recsError}
           onPlay={handlePlayRecording}
+          onDownload={handleDownloadRecording}
           onDelete={deleteRecording}
           onLoad={handleLoadRecording}
           onShowCode={(rec) => setCodeModalJson(configToJson(recordingToConfig(rec)))}

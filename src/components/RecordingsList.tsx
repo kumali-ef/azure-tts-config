@@ -22,12 +22,13 @@ interface RecordingsListProps {
   loading: boolean;
   error: string | null;
   onPlay: (id: string) => void;
+  onDownload: (id: string) => void;
   onDelete: (id: string) => void;
   onShowCode: (recording: Recording) => void;
   onLoad: (recording: Recording) => void;
 }
 
-export function RecordingsList({ recordings, loading, error, onPlay, onDelete, onShowCode, onLoad }: RecordingsListProps) {
+export function RecordingsList({ recordings, loading, error, onPlay, onDownload, onDelete, onShowCode, onLoad }: RecordingsListProps) {
   const [filters, setFilters] = useState<RecordingFilters>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -162,6 +163,12 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDelete, o
                   className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
                 >
                   ▶ Play
+                </button>
+                <button
+                  onClick={() => onDownload(rec.id)}
+                  className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs hover:bg-indigo-200 transition-colors"
+                >
+                  ⬇ Download
                 </button>
                 <button
                   onClick={() => onDelete(rec.id)}

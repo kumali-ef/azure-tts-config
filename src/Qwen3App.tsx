@@ -6,6 +6,7 @@ import { useQwen3Voices } from './hooks/useQwen3Voices';
 import { useQwen3Recordings } from './hooks/useQwen3Recordings';
 import { qwen3Synthesize, qwen3SynthesizeStreaming } from './utils/qwen3-tts';
 import type { Qwen3SynthesisParams } from './utils/qwen3-tts';
+import { sanitizeFilename } from './utils/storage';
 import { Accordion } from './components/Accordion';
 import { ShowJsonModal } from './components/ShowJsonModal';
 import { Qwen3Settings } from './components/qwen3/Qwen3Settings';
@@ -122,6 +123,18 @@ export function Qwen3App() {
     }
   };
 
+  const handleDownloadRecording = (id: string) => {
+    const rec = recordings.find((r) => r.id === id);
+    if (!rec) return;
+    const voiceName = sanitizeFilename(rec.voice_display_name || rec.voice);
+    const a = document.createElement('a');
+    a.href = `/api/qwen3/recordings/${id}/audio`;
+    a.download = `qwen3-${voiceName}-${id}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleLoadRecording = (rec: Qwen3Recording) => {
     setConfig(recordingToConfig(rec));
   };
@@ -223,6 +236,7 @@ export function Qwen3App() {
           loading={recsLoading}
           error={recsError}
           onPlay={handlePlayRecording}
+          onDownload={handleDownloadRecording}
           onDelete={deleteRecording}
           onLoad={handleLoadRecording}
           onShowCode={(rec) => setCodeModalJson(configToJson(recordingToConfig(rec)))}

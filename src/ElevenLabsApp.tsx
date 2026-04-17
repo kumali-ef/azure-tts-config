@@ -6,6 +6,7 @@ import { useElevenLabsVoices } from './hooks/useElevenLabsVoices';
 import { useElevenLabsRecordings } from './hooks/useElevenLabsRecordings';
 import { elevenLabsSynthesize, elevenLabsSynthesizeStreaming } from './utils/elevenlabs-tts';
 import type { ElevenLabsSynthesisParams } from './utils/elevenlabs-tts';
+import { sanitizeFilename } from './utils/storage';
 import { Accordion } from './components/Accordion';
 import { ShowJsonModal } from './components/ShowJsonModal';
 import { ElevenLabsSettings } from './components/elevenlabs/ElevenLabsSettings';
@@ -133,6 +134,18 @@ export function ElevenLabsApp() {
     }
   };
 
+  const handleDownloadRecording = (id: string) => {
+    const rec = recordings.find((r) => r.id === id);
+    if (!rec) return;
+    const voiceName = sanitizeFilename(rec.voice_name || rec.voice_id);
+    const a = document.createElement('a');
+    a.href = `/api/elevenlabs/recordings/${id}/audio`;
+    a.download = `elevenlabs-${voiceName}-${id}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleLoadRecording = (rec: ElevenLabsRecording) => {
     setConfig(recordingToConfig(rec));
   };
@@ -238,6 +251,7 @@ export function ElevenLabsApp() {
           loading={recsLoading}
           error={recsError}
           onPlay={handlePlayRecording}
+          onDownload={handleDownloadRecording}
           onDelete={deleteRecording}
           onLoad={handleLoadRecording}
           onShowCode={(rec) => setCodeModalJson(configToJson(recordingToConfig(rec)))}

@@ -6,6 +6,7 @@ interface Props {
   loading: boolean;
   error: string | null;
   onPlay: (id: string) => void;
+  onDownload: (id: string) => void;
   onDelete: (id: string) => void;
   onLoad: (rec: Qwen3Recording) => void;
   onShowCode: (rec: Qwen3Recording) => void;
@@ -16,7 +17,7 @@ function modelBadge(model: string) {
   return { label: 'flash', color: 'bg-teal-500' };
 }
 
-export function Qwen3RecordingsList({ recordings, loading, error, onPlay, onDelete, onLoad, onShowCode }: Props) {
+export function Qwen3RecordingsList({ recordings, loading, error, onPlay, onDownload, onDelete, onLoad, onShowCode }: Props) {
   const [filter, setFilter] = useState('');
 
   const filtered = recordings.filter((rec) => {
@@ -87,6 +88,11 @@ export function Qwen3RecordingsList({ recordings, loading, error, onPlay, onDele
                     className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
                     title="Play"
                   >▶</button>
+                  <button
+                    onClick={() => onDownload(rec.id)}
+                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                    title="Download"
+                  >⬇</button>
                   <button
                     onClick={() => onLoad(rec)}
                     className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"

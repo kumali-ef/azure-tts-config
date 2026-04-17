@@ -6,12 +6,13 @@ interface Props {
   loading: boolean;
   error: string | null;
   onPlay: (id: string) => void;
+  onDownload: (id: string) => void;
   onDelete: (id: string) => void;
   onLoad: (rec: CartesiaRecording) => void;
   onShowCode: (rec: CartesiaRecording) => void;
 }
 
-export function CartesiaRecordingsList({ recordings, loading, error, onPlay, onDelete, onLoad, onShowCode }: Props) {
+export function CartesiaRecordingsList({ recordings, loading, error, onPlay, onDownload, onDelete, onLoad, onShowCode }: Props) {
   const [filter, setFilter] = useState('');
 
   const filtered = recordings.filter((rec) => {
@@ -83,6 +84,11 @@ export function CartesiaRecordingsList({ recordings, loading, error, onPlay, onD
                   className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
                   title="Play"
                 >▶</button>
+                <button
+                  onClick={() => onDownload(rec.id)}
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  title="Download"
+                >⬇</button>
                 <button
                   onClick={() => onLoad(rec)}
                   className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"

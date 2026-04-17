@@ -34,3 +34,7 @@ export function getStoredCustomVoiceName(): string {
 export function setStoredCustomVoiceName(name: string): void {
   localStorage.setItem(CUSTOM_VOICE_NAME_STORAGE, name);
 }
+
+export function sanitizeFilename(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 50);
+}

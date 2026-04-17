@@ -6,6 +6,7 @@ import { useCartesiaVoices } from './hooks/useCartesiaVoices';
 import { useCartesiaRecordings } from './hooks/useCartesiaRecordings';
 import { cartesiaSynthesize, cartesiaSynthesizeStreaming } from './utils/cartesia-tts';
 import type { CartesiaSynthesisParams } from './utils/cartesia-tts';
+import { sanitizeFilename } from './utils/storage';
 import { Accordion } from './components/Accordion';
 import { ShowJsonModal } from './components/ShowJsonModal';
 import { CartesiaSettings } from './components/cartesia/CartesiaSettings';
@@ -125,6 +126,18 @@ export function CartesiaApp() {
     }
   };
 
+  const handleDownloadRecording = (id: string) => {
+    const rec = recordings.find((r) => r.id === id);
+    if (!rec) return;
+    const voiceName = sanitizeFilename(rec.voice_name || rec.voice_id);
+    const a = document.createElement('a');
+    a.href = `/api/cartesia/recordings/${id}/audio`;
+    a.download = `cartesia-${voiceName}-${id}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleLoadRecording = (rec: CartesiaRecording) => {
     setConfig(recordingToConfig(rec));
   };
@@ -229,6 +242,7 @@ export function CartesiaApp() {
           loading={recsLoading}
           error={recsError}
           onPlay={handlePlayRecording}
+          onDownload={handleDownloadRecording}
           onDelete={deleteRecording}
           onLoad={handleLoadRecording}
           onShowCode={(rec) => setCodeModalJson(configToJson(recordingToConfig(rec)))}
