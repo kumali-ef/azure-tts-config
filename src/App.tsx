@@ -3,8 +3,9 @@ import { AzureApp } from './AzureApp';
 import { MiniMaxApp } from './MiniMaxApp';
 import { Qwen3App } from './Qwen3App';
 import { CartesiaApp } from './CartesiaApp';
+import { ElevenLabsApp } from './ElevenLabsApp';
 
-type Tab = 'azure' | 'minimax' | 'qwen3' | 'cartesia';
+type Tab = 'azure' | 'minimax' | 'qwen3' | 'cartesia' | 'elevenlabs';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('azure');
@@ -54,6 +55,16 @@ function App() {
           >
             Cartesia TTS
           </button>
+          <button
+            onClick={() => setActiveTab('elevenlabs')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'elevenlabs'
+                ? 'border-amber-500 text-amber-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            ElevenLabs TTS
+          </button>
           <a
             href="https://playground.deepgram.com/?endpoint=speak&architecture=aura-2&language=en"
             target="_blank"
@@ -65,7 +76,7 @@ function App() {
         </nav>
       </header>
 
-      {activeTab === 'azure' ? <AzureApp /> : activeTab === 'minimax' ? <MiniMaxApp /> : activeTab === 'qwen3' ? <Qwen3App /> : <CartesiaApp />}
+      {activeTab === 'azure' ? <AzureApp /> : activeTab === 'minimax' ? <MiniMaxApp /> : activeTab === 'qwen3' ? <Qwen3App /> : activeTab === 'cartesia' ? <CartesiaApp /> : <ElevenLabsApp />}
     </div>
   );
 }

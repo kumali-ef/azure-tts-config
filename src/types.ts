@@ -237,3 +237,57 @@ export const DEFAULT_CARTESIA_CONFIG: CartesiaConfig = {
   volume: 1.0,
   emotion: '',
 };
+
+// ── ElevenLabs TTS Types ──
+
+export interface ElevenLabsVoice {
+  voice_id: string;
+  name: string;
+  category: string;
+  labels: Record<string, string>;
+}
+
+export interface ElevenLabsConfig {
+  model: string;
+  voiceId: string;
+  voiceName: string;
+  text: string;
+  languageCode: string;
+  stability: number;
+  similarityBoost: number;
+  style: number;
+  useSpeakerBoost: boolean;
+  speed: number;
+}
+
+export interface ElevenLabsRecording {
+  id: string;
+  model: string;
+  voice_id: string;
+  voice_name: string | null;
+  text: string;
+  language_code: string | null;
+  stability: number | null;
+  similarity_boost: number | null;
+  style: number | null;
+  use_speaker_boost: number | null;
+  speed: number | null;
+  audio_filename: string;
+  api_response_time_ms: number | null;
+  stream_duration_ms: number | null;
+  created_at: string;
+  label: string | null;
+}
+
+export const DEFAULT_ELEVENLABS_CONFIG: ElevenLabsConfig = {
+  model: 'eleven_flash_v2_5',
+  voiceId: '',
+  voiceName: '',
+  text: '',
+  languageCode: '',
+  stability: 0.5,
+  similarityBoost: 0.75,
+  style: 0.0,
+  useSpeakerBoost: true,
+  speed: 1.0,
+};
