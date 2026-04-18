@@ -336,3 +336,53 @@ export const DEFAULT_INWORLD_CONFIG: InworldConfig = {
   temperature: 1.0,
   applyTextNormalization: 'APPLY_TEXT_NORMALIZATION_UNSPECIFIED',
 };
+
+// ── Fish Audio TTS Types ──
+
+export interface FishAudioConfig {
+  model: string;
+  referenceId: string;
+  voiceName: string;
+  text: string;
+  chunkLength: number;
+  normalize: boolean;
+  latency: string;
+  temperature: number;
+  topP: number;
+  speed: number;
+  volume: number;
+}
+
+export interface FishAudioRecording {
+  id: string;
+  model: string;
+  reference_id: string | null;
+  voice_name: string | null;
+  text: string;
+  chunk_length: number | null;
+  normalize: number | null;
+  latency: string | null;
+  temperature: number | null;
+  top_p: number | null;
+  speed: number | null;
+  volume: number | null;
+  audio_filename: string;
+  api_response_time_ms: number | null;
+  stream_duration_ms: number | null;
+  created_at: string;
+  label: string | null;
+}
+
+export const DEFAULT_FISHAUDIO_CONFIG: FishAudioConfig = {
+  model: 's2-pro',
+  referenceId: '',
+  voiceName: '',
+  text: '',
+  chunkLength: 200,
+  normalize: true,
+  latency: 'balanced',
+  temperature: 0.7,
+  topP: 0.7,
+  speed: 1.0,
+  volume: 0,
+};

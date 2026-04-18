@@ -5,8 +5,9 @@ import { Qwen3App } from './Qwen3App';
 import { CartesiaApp } from './CartesiaApp';
 import { ElevenLabsApp } from './ElevenLabsApp';
 import { InworldApp } from './InworldApp';
+import { FishAudioApp } from './FishAudioApp';
 
-type Tab = 'azure' | 'minimax' | 'qwen3' | 'cartesia' | 'elevenlabs' | 'inworld';
+type Tab = 'azure' | 'minimax' | 'qwen3' | 'cartesia' | 'elevenlabs' | 'inworld' | 'fishaudio';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('azure');
@@ -76,6 +77,16 @@ function App() {
           >
             Inworld TTS
           </button>
+          <button
+            onClick={() => setActiveTab('fishaudio')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'fishaudio'
+                ? 'border-cyan-500 text-cyan-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Fish Audio TTS
+          </button>
           <a
             href="https://playground.deepgram.com/?endpoint=speak&architecture=aura-2&language=en"
             target="_blank"
@@ -87,7 +98,7 @@ function App() {
         </nav>
       </header>
 
-      {activeTab === 'azure' ? <AzureApp /> : activeTab === 'minimax' ? <MiniMaxApp /> : activeTab === 'qwen3' ? <Qwen3App /> : activeTab === 'cartesia' ? <CartesiaApp /> : activeTab === 'elevenlabs' ? <ElevenLabsApp /> : <InworldApp />}
+      {activeTab === 'azure' ? <AzureApp /> : activeTab === 'minimax' ? <MiniMaxApp /> : activeTab === 'qwen3' ? <Qwen3App /> : activeTab === 'cartesia' ? <CartesiaApp /> : activeTab === 'elevenlabs' ? <ElevenLabsApp /> : activeTab === 'inworld' ? <InworldApp /> : <FishAudioApp />}
     </div>
   );
 }
