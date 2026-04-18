@@ -17,6 +17,49 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 const FISHAUDIO_API_URL = 'https://api.fish.audio/v1/tts';
+const FISHAUDIO_MODEL_URL = 'https://api.fish.audio/model';
+
+// GET /api/fishaudio/voices — List/search voice models
+router.get('/voices', async (req: Request, res: Response) => {
+  const apiKey = (req.query.apiKey as string || '').trim();
+  const search = (req.query.search as string || '').trim();
+  const pageSize = parseInt(req.query.pageSize as string) || 20;
+  const page = parseInt(req.query.page as string) || 1;
+  const self = req.query.self === 'true';
+
+  if (!apiKey) {
+    res.status(400).json({ error: 'Missing apiKey' });
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.set('page_size', String(pageSize));
+    params.set('page_number', String(page));
+    params.set('sort_by', 'score');
+    if (search) params.set('title', search);
+    if (self) params.set('self', 'true');
+
+    const response = await fetch(`${FISHAUDIO_MODEL_URL}?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      res.status(response.status).json({
+        error: `Fish Audio API error (${response.status})`,
+        upstreamMessage: text,
+      });
+      return;
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to fetch voices';
+    res.status(500).json({ error: message });
+  }
+});
 
 // POST /api/fishaudio/synthesize — Non-streaming: full WAV download
 router.post('/synthesize', async (req: Request, res: Response) => {

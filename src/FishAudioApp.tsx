@@ -3,6 +3,7 @@ import type { FishAudioConfig, FishAudioRecording } from './types';
 import { DEFAULT_FISHAUDIO_CONFIG } from './types';
 import { useFishAudioSettings } from './hooks/useFishAudioSettings';
 import { useFishAudioRecordings } from './hooks/useFishAudioRecordings';
+import { useFishAudioVoices } from './hooks/useFishAudioVoices';
 import { fishAudioSynthesize, fishAudioSynthesizeStreaming } from './utils/fishaudio-tts';
 import type { FishAudioSynthesisParams } from './utils/fishaudio-tts';
 import { sanitizeFilename } from './utils/storage';
@@ -10,7 +11,7 @@ import { Accordion } from './components/Accordion';
 import { ShowJsonModal } from './components/ShowJsonModal';
 import { FishAudioSettings } from './components/fishaudio/FishAudioSettings';
 import { FishAudioModelSelector } from './components/fishaudio/FishAudioModelSelector';
-import { FishAudioVoiceInput } from './components/fishaudio/FishAudioVoiceInput';
+import { FishAudioVoiceSelector } from './components/fishaudio/FishAudioVoiceSelector';
 import { FishAudioAdvancedSettings } from './components/fishaudio/FishAudioAdvancedSettings';
 import { FishAudioRecordingsList } from './components/fishaudio/FishAudioRecordingsList';
 
@@ -33,6 +34,11 @@ function recordingToConfig(rec: FishAudioRecording): FishAudioConfig {
 export function FishAudioApp() {
   const { apiKey, setApiKey, isConfigured } = useFishAudioSettings();
   const { recordings, loading: recsLoading, error: recsError, saveRecording, deleteRecording } = useFishAudioRecordings();
+  const {
+    voices, loading: voicesLoading, error: voicesError,
+    search: voiceSearch, selfOnly, total: voicesTotal,
+    setSearch: setVoiceSearch, setSelfOnly, retry: retryVoices,
+  } = useFishAudioVoices(apiKey);
 
   const [config, setConfig] = useState<FishAudioConfig>(DEFAULT_FISHAUDIO_CONFIG);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
@@ -164,11 +170,21 @@ export function FishAudioApp() {
         </Accordion>
 
         <Accordion title="Voice">
-          <FishAudioVoiceInput
-            referenceId={config.referenceId}
+          <FishAudioVoiceSelector
+            voices={voices}
+            loading={voicesLoading}
+            error={voicesError}
+            search={voiceSearch}
+            selfOnly={selfOnly}
+            total={voicesTotal}
+            selectedReferenceId={config.referenceId}
             voiceName={config.voiceName}
-            onReferenceIdChange={(referenceId) => updateConfig({ referenceId })}
+            onSearchChange={setVoiceSearch}
+            onSelfOnlyChange={setSelfOnly}
+            onVoiceChange={(referenceId, voiceName) => updateConfig({ referenceId, voiceName })}
+            onManualIdChange={(referenceId) => updateConfig({ referenceId })}
             onVoiceNameChange={(voiceName) => updateConfig({ voiceName })}
+            onRetry={retryVoices}
           />
         </Accordion>
 

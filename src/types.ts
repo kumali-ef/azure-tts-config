@@ -339,6 +339,17 @@ export const DEFAULT_INWORLD_CONFIG: InworldConfig = {
 
 // ── Fish Audio TTS Types ──
 
+export interface FishAudioVoice {
+  _id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  languages: string[];
+  author: { _id: string; nickname: string };
+  like_count: number;
+  task_count: number;
+}
+
 export interface FishAudioConfig {
   model: string;
   referenceId: string;
