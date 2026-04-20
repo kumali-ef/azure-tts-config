@@ -397,3 +397,38 @@ export const DEFAULT_FISHAUDIO_CONFIG: FishAudioConfig = {
   speed: 1.0,
   volume: 0,
 };
+
+// ── Gemini TTS Types ──
+
+export interface GeminiVoice {
+  name: string;
+  displayName: string;
+  gender: string;
+  style: string;
+}
+
+export interface GeminiConfig {
+  model: string;
+  voiceName: string;
+  voiceDisplayName: string;
+  text: string;
+}
+
+export interface GeminiRecording {
+  id: string;
+  model: string;
+  voice_name: string;
+  voice_display_name: string | null;
+  text: string;
+  audio_filename: string;
+  api_response_time_ms: number | null;
+  created_at: string;
+  label: string | null;
+}
+
+export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
+  model: 'gemini-3.1-flash-tts-preview',
+  voiceName: '',
+  voiceDisplayName: '',
+  text: '',
+};

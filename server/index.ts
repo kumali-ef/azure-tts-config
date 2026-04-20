@@ -7,6 +7,7 @@ import cartesiaRouter from './cartesia-routes';
 import elevenlabsRouter from './elevenlabs-routes';
 import inworldRouter from './inworld-routes';
 import fishaudioRouter from './fishaudio-routes';
+import geminiRouter from './gemini-routes';
 
 const app = express();
 const PORT = 7740;
@@ -20,6 +21,7 @@ app.use('/api/cartesia', cartesiaRouter);
 app.use('/api/elevenlabs', elevenlabsRouter);
 app.use('/api/inworld', inworldRouter);
 app.use('/api/fishaudio', fishaudioRouter);
+app.use('/api/gemini', geminiRouter);
 
 app.listen(PORT, () => {
   console.log(`TTS Config Tester backend running on http://localhost:${PORT}`);
