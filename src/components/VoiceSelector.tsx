@@ -35,6 +35,7 @@ export function VoiceSelector({
   const [filterRole, setFilterRole] = useState(false);
   const [filterMultiLang, setFilterMultiLang] = useState(false);
   const [filterDragonHD, setFilterDragonHD] = useState(false);
+  const [filterDragonHDOmni, setFilterDragonHDOmni] = useState(false);
   const [filterMale, setFilterMale] = useState(false);
   const [filterFemale, setFilterFemale] = useState(false);
 
@@ -43,7 +44,8 @@ export function VoiceSelector({
       if (filterStyle && !(v.StyleList && v.StyleList.length > 0)) return false;
       if (filterRole && !(v.RolePlayList && v.RolePlayList.length > 0)) return false;
       if (filterMultiLang && !v.ShortName.includes('Multilingual')) return false;
-      if (filterDragonHD && !v.ShortName.includes('DragonHD')) return false;
+      if (filterDragonHD && !(v.ShortName.includes('DragonHD') && !v.ShortName.includes('DragonHDOmni'))) return false;
+      if (filterDragonHDOmni && !v.ShortName.includes('DragonHDOmni')) return false;
       // Gender: if only one is checked, filter to that gender; both or neither = no filter
       if (filterMale !== filterFemale) {
         if (filterMale && v.Gender !== 'Male') return false;
@@ -53,17 +55,17 @@ export function VoiceSelector({
     });
   };
 
-  const anyFilter = filterStyle || filterRole || filterMultiLang || filterDragonHD || filterMale !== filterFemale;
+  const anyFilter = filterStyle || filterRole || filterMultiLang || filterDragonHD || filterDragonHDOmni || filterMale !== filterFemale;
 
   const filteredAllVoices = useMemo(() => {
     if (!anyFilter) return allVoices;
     return applyFilters(allVoices);
-  }, [allVoices, filterStyle, filterRole, filterMultiLang, filterDragonHD, filterMale, filterFemale]);
+  }, [allVoices, filterStyle, filterRole, filterMultiLang, filterDragonHD, filterDragonHDOmni, filterMale, filterFemale]);
 
   const filteredVoices = useMemo(() => {
     if (!anyFilter) return voices;
     return applyFilters(voices);
-  }, [voices, filterStyle, filterRole, filterMultiLang, filterDragonHD, filterMale, filterFemale]);
+  }, [voices, filterStyle, filterRole, filterMultiLang, filterDragonHD, filterDragonHDOmni, filterMale, filterFemale]);
 
   const filteredLanguages = useMemo(() => {
     const localesWithVoices = new Set(filteredAllVoices.map((v) => v.Locale));
@@ -179,6 +181,10 @@ export function VoiceSelector({
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={filterDragonHD} onChange={(e) => setFilterDragonHD(e.target.checked)} className="rounded" />
           <span className="text-gray-600">Dragon HD</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={filterDragonHDOmni} onChange={(e) => setFilterDragonHDOmni(e.target.checked)} className="rounded" />
+          <span className="text-gray-600">Dragon HD Omni</span>
         </label>
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={filterMale} onChange={(e) => setFilterMale(e.target.checked)} className="rounded" />
