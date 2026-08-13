@@ -1,13 +1,23 @@
 import type { TtsConfig } from '../types';
 
+/**
+ * A prosody value overrides the default when it is non-empty and not the
+ * `medium` no-op level. Custom values (e.g. `+20%`, `1.5`, `-6dB`) pass through
+ * verbatim; Azure validates them authoritatively.
+ */
+function isProsodyActive(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed !== '' && trimmed !== 'medium';
+}
+
 export function buildSsml(config: TtsConfig): string {
   const hasStyle = config.style !== '';
   const hasRole = config.role !== '';
   const hasExpressAs = hasStyle || hasRole;
   const hasProsody =
-    config.rate !== 'medium' ||
-    config.pitch !== 'medium' ||
-    config.volume !== 'medium';
+    isProsodyActive(config.rate) ||
+    isProsodyActive(config.pitch) ||
+    isProsodyActive(config.volume);
   const hasEmphasis = config.emphasis !== '' && config.emphasis !== 'none';
   const hasBreak = config.breakValue !== '';
 
@@ -32,9 +42,9 @@ export function buildSsml(config: TtsConfig): string {
   // Wrap with prosody if any prosody values differ from default
   if (hasProsody) {
     const attrs: string[] = [];
-    if (config.rate !== 'medium') attrs.push(`rate="${config.rate}"`);
-    if (config.pitch !== 'medium') attrs.push(`pitch="${config.pitch}"`);
-    if (config.volume !== 'medium') attrs.push(`volume="${config.volume}"`);
+    if (isProsodyActive(config.rate)) attrs.push(`rate="${config.rate.trim()}"`);
+    if (isProsodyActive(config.pitch)) attrs.push(`pitch="${config.pitch.trim()}"`);
+    if (isProsodyActive(config.volume)) attrs.push(`volume="${config.volume.trim()}"`);
     innerContent = `<prosody ${attrs.join(' ')}>${innerContent}</prosody>`;
   }
 
