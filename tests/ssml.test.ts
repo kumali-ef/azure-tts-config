@@ -114,6 +114,69 @@ describe('buildSsml', () => {
     expect(ssml).toContain('<break time="500ms"/>');
   });
 
+  it('emits a custom percentage rate verbatim', () => {
+    const config: TtsConfig = {
+      ...DEFAULT_CONFIG,
+      voiceName: 'en-US-JennyNeural',
+      language: 'en-US',
+      text: 'Faster',
+      rate: '+20%',
+    };
+    const ssml = buildSsml(config);
+    expect(ssml).toContain('<prosody rate="+20%">');
+  });
+
+  it('emits a custom multiplier rate verbatim', () => {
+    const config: TtsConfig = {
+      ...DEFAULT_CONFIG,
+      voiceName: 'en-US-JennyNeural',
+      language: 'en-US',
+      text: 'Faster',
+      rate: '1.5',
+    };
+    const ssml = buildSsml(config);
+    expect(ssml).toContain('rate="1.5"');
+  });
+
+  it('emits custom pitch and volume values verbatim', () => {
+    const config: TtsConfig = {
+      ...DEFAULT_CONFIG,
+      voiceName: 'en-US-JennyNeural',
+      language: 'en-US',
+      text: 'Test',
+      pitch: '+50Hz',
+      volume: '-6dB',
+    };
+    const ssml = buildSsml(config);
+    expect(ssml).toContain('pitch="+50Hz"');
+    expect(ssml).toContain('volume="-6dB"');
+  });
+
+  it('omits prosody when rate is a custom-but-empty value', () => {
+    const config: TtsConfig = {
+      ...DEFAULT_CONFIG,
+      voiceName: 'en-US-JennyNeural',
+      language: 'en-US',
+      text: 'Plain text',
+      rate: '',
+    };
+    const ssml = buildSsml(config);
+    expect(ssml).not.toContain('rate=');
+    expect(ssml).not.toContain('<prosody');
+  });
+
+  it('trims whitespace around a custom prosody value', () => {
+    const config: TtsConfig = {
+      ...DEFAULT_CONFIG,
+      voiceName: 'en-US-JennyNeural',
+      language: 'en-US',
+      text: 'Test',
+      rate: ' +20% ',
+    };
+    const ssml = buildSsml(config);
+    expect(ssml).toContain('rate="+20%"');
+  });
+
   it('omits prosody element when all values are default', () => {
     const config: TtsConfig = {
       ...DEFAULT_CONFIG,
