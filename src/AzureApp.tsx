@@ -6,6 +6,8 @@ import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';
 import { buildSsml } from './utils/ssml';
 import { synthesizeSpeech, synthesizeSpeechStreaming } from './utils/azure-tts';
+import { synthesizeWithVisemes } from './utils/azure-viseme-tts';
+import type { VisemeEvent } from './utils/viseme-data';
 import {
   getStoredDeploymentId, setStoredDeploymentId,
   getStoredCustomVoiceName, setStoredCustomVoiceName,
@@ -58,6 +60,7 @@ export function AzureApp() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [codeModalConfig, setCodeModalConfig] = useState<TtsConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Custom voice state (persisted in localStorage)
   const [customVoiceName, setCustomVoiceName] = useState(getStoredCustomVoiceName);
@@ -100,18 +103,40 @@ export function AzureApp() {
 
     setIsSynthesizing(true);
     setError(null);
+    setNotice(null);
     try {
+      if (!audioRef.current) return;
       const synthConfig = { ...config, voiceName: effectiveVoiceName };
       const ssml = buildSsml(synthConfig);
-      const startTime = performance.now();
-      const audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
-      const apiResponseTimeMs = Math.round(performance.now() - startTime);
-      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) {
-        audioRef.current.src = url;
+
+      let audioBuffer: ArrayBuffer;
+      let apiResponseTimeMs: number;
+      let visemes: VisemeEvent[] = [];
+      let audioDurationMs: number | null = null;
+
+      if (captureVisemes) {
+        const result = await synthesizeWithVisemes(key, region, ssml, audioRef.current, {
+          deploymentId: effectiveDeploymentId,
+          stream: false,
+        });
+        audioBuffer = result.buffer;
+        apiResponseTimeMs = result.totalMs;
+        visemes = result.visemes;
+        audioDurationMs = result.audioDurationMs;
+        if (visemes.length === 0) {
+          setNotice('Synthesis succeeded but no viseme events were received for this voice.');
+        }
+      } else {
+        const startTime = performance.now();
+        audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
+        apiResponseTimeMs = Math.round(performance.now() - startTime);
+        audioRef.current.src = URL.createObjectURL(
+          new Blob([audioBuffer], { type: 'audio/mpeg' }),
+        );
         audioRef.current.play();
       }
+
+      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       // Auto-save after successful synthesis
       await saveRecording(blob, {
         voice_name: effectiveVoiceName,
@@ -131,6 +156,8 @@ export function AzureApp() {
         ssml,
         api_response_time_ms: apiResponseTimeMs,
         deployment_id: isCustom ? customDeploymentId : null,
+        visemes: visemes.length > 0 ? JSON.stringify(visemes) : null,
+        audio_duration_ms: visemes.length > 0 ? audioDurationMs : null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synthesis failed');
@@ -152,12 +179,39 @@ export function AzureApp() {
 
     setIsStreaming(true);
     setError(null);
+    setNotice(null);
     try {
       const synthConfig = { ...config, voiceName: effectiveVoiceName };
       const ssml = buildSsml(synthConfig);
-      const { ttfbMs, totalMs, buffer } = await synthesizeSpeechStreaming(
-        key, region, ssml, audioRef.current, effectiveDeploymentId
-      );
+
+      let buffer: ArrayBuffer;
+      let ttfbMs: number;
+      let totalMs: number;
+      let visemes: VisemeEvent[] = [];
+      let audioDurationMs: number | null = null;
+
+      if (captureVisemes) {
+        const result = await synthesizeWithVisemes(key, region, ssml, audioRef.current, {
+          deploymentId: effectiveDeploymentId,
+          stream: true,
+        });
+        buffer = result.buffer;
+        ttfbMs = result.ttfbMs;
+        totalMs = result.totalMs;
+        visemes = result.visemes;
+        audioDurationMs = result.audioDurationMs;
+        if (visemes.length === 0) {
+          setNotice('Synthesis succeeded but no viseme events were received for this voice.');
+        }
+      } else {
+        const result = await synthesizeSpeechStreaming(
+          key, region, ssml, audioRef.current, effectiveDeploymentId
+        );
+        buffer = result.buffer;
+        ttfbMs = result.ttfbMs;
+        totalMs = result.totalMs;
+      }
+
       const blob = new Blob([buffer], { type: 'audio/mpeg' });
       await saveRecording(blob, {
         voice_name: effectiveVoiceName,
@@ -178,6 +232,8 @@ export function AzureApp() {
         api_response_time_ms: ttfbMs,
         stream_duration_ms: totalMs,
         deployment_id: isCustom ? customDeploymentId : null,
+        visemes: visemes.length > 0 ? JSON.stringify(visemes) : null,
+        audio_duration_ms: visemes.length > 0 ? audioDurationMs : null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Streaming synthesis failed');
@@ -324,6 +380,12 @@ export function AzureApp() {
           {error && (
             <div className="mx-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
               {error}
+            </div>
+          )}
+
+          {notice && (
+            <div className="mx-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-md text-sm">
+              {notice}
             </div>
           )}
 
