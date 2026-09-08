@@ -6,6 +6,7 @@ import {
   visemeColor,
   FAMILY_COLORS,
   FAMILY_LABELS,
+  FAMILY_ORDER,
 } from '../src/utils/viseme-shapes';
 
 describe('visemeShape', () => {
@@ -61,6 +62,20 @@ describe('visemeFamily', () => {
       Array.from({ length: 22 }, (_, id) => visemeFamily(id)),
     );
     expect(seen.size).toBe(7);
+  });
+});
+
+describe('FAMILY_ORDER', () => {
+  it('lists every family exactly once', () => {
+    expect(FAMILY_ORDER).toHaveLength(7);
+    expect(new Set(FAMILY_ORDER).size).toBe(7);
+  });
+
+  it('covers exactly the families reachable from IDs 0-21', () => {
+    const reachable = new Set(
+      Array.from({ length: 22 }, (_, id) => visemeFamily(id)!),
+    );
+    expect(new Set(FAMILY_ORDER)).toEqual(reachable);
   });
 });
 

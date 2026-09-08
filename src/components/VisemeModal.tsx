@@ -3,13 +3,22 @@ import type { Recording } from '../types';
 import { parseVisemes, visemeDeltas, visemeTimelineMarks } from '../utils/viseme-data';
 import type { VisemeFamily } from '../utils/viseme-shapes';
 import {
-  visemeShape, visemeColor, visemeFamily, FAMILY_COLORS, FAMILY_LABELS,
+  visemeShape, visemeColor, visemeFamily, FAMILY_COLORS, FAMILY_LABELS, FAMILY_ORDER,
 } from '../utils/viseme-shapes';
 
 /** SVG user units. The strip scales to its container via viewBox + width:100%. */
 const TIMELINE_WIDTH = 1000;
 const TIMELINE_HEIGHT = 48;
 const MARK_WIDTH = 3;
+
+/**
+ * The viewport is MARK_WIDTH wider than the timeline so a mark clamped to TIMELINE_WIDTH
+ * is still drawn. An SVG root clips to its viewport, so without the extra width a rect at
+ * x = TIMELINE_WIDTH spans [1000, 1003] and renders nothing — silently hiding the exact
+ * case the clamp in visemeTimelineMarks exists for, namely Azure reporting a final event
+ * marginally past the reported audio duration.
+ */
+const VIEWBOX_WIDTH = TIMELINE_WIDTH + MARK_WIDTH;
 
 interface VisemeModalProps {
   recording: Recording;
@@ -30,13 +39,15 @@ export function VisemeModal({ recording, onClose }: VisemeModalProps) {
 
   const eventsPerSec = durationMs > 0 ? visemes.length / (durationMs / 1000) : 0;
 
+  // Fixed articulation order, not first-occurrence order, so the legend reads the same
+  // across recordings — the whole point of the feature is comparing them side by side.
   const familiesPresent = useMemo(() => {
-    const set = new Set<VisemeFamily>();
+    const present = new Set<VisemeFamily>();
     for (const v of visemes) {
       const family = visemeFamily(v.visemeId);
-      if (family) set.add(family);
+      if (family) present.add(family);
     }
-    return [...set];
+    return FAMILY_ORDER.filter((family) => present.has(family));
   }, [visemes]);
 
   const handleCopy = async () => {
@@ -79,7 +90,7 @@ export function VisemeModal({ recording, onClose }: VisemeModalProps) {
               <span>{durationMs.toLocaleString()} ms</span>
             </div>
             <svg
-              viewBox={`0 0 ${TIMELINE_WIDTH} ${TIMELINE_HEIGHT}`}
+              viewBox={`0 0 ${VIEWBOX_WIDTH} ${TIMELINE_HEIGHT}`}
               preserveAspectRatio="none"
               className="w-full h-12 bg-gray-50 border rounded"
               onMouseLeave={() => setHovered(null)}

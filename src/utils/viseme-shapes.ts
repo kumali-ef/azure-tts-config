@@ -55,6 +55,21 @@ const FAMILY_BY_ID: Record<number, VisemeFamily> = {
   19: 'plosive', 20: 'plosive', 21: 'plosive',
 };
 
+/**
+ * Canonical articulation order (silence, then vowels front-to-back, then consonants by
+ * closure). Used for legend ordering so the same families read in the same order across
+ * recordings, which matters when comparing two timelines side by side.
+ */
+export const FAMILY_ORDER: readonly VisemeFamily[] = [
+  'silence',
+  'open-vowel',
+  'close-vowel',
+  'diphthong',
+  'approximant',
+  'fricative',
+  'plosive',
+];
+
 export const FAMILY_COLORS: Record<VisemeFamily, string> = {
   silence: '#cbd5e1',
   'open-vowel': '#f59e0b',

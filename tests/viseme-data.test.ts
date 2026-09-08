@@ -19,6 +19,13 @@ describe('ticksToMs', () => {
     expect(ticksToMs(14_999)).toBe(1);
     expect(ticksToMs(15_000)).toBe(2);
   });
+
+  it('returns 0 rather than NaN for a missing or non-finite duration', () => {
+    // result.audioDuration reads back undefined if the service never sends SessionEnd.
+    expect(ticksToMs(undefined as unknown as number)).toBe(0);
+    expect(ticksToMs(NaN)).toBe(0);
+    expect(ticksToMs(Infinity)).toBe(0);
+  });
 });
 
 describe('parseVisemes', () => {
@@ -42,6 +49,16 @@ describe('parseVisemes', () => {
 
   it('returns an empty array when the JSON is not an array', () => {
     expect(parseVisemes('{"offsetMs":1}')).toEqual([]);
+  });
+
+  it('drops elements that are not viseme events', () => {
+    // The column is free-form TEXT, so a hand-edited value can contain anything.
+    expect(parseVisemes('[null]')).toEqual([]);
+    expect(parseVisemes('[1, "x", null, {}]')).toEqual([]);
+    expect(parseVisemes('[{"offsetMs":"137","visemeId":6}]')).toEqual([]);
+    expect(parseVisemes('[{"offsetMs":137,"visemeId":6}, null]')).toEqual([
+      { offsetMs: 137, visemeId: 6 },
+    ]);
   });
 });
 

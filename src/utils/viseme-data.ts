@@ -14,16 +14,33 @@ export interface TimelineMark {
 /** The Speech SDK reports offsets and durations in 100-nanosecond ticks. */
 const TICKS_PER_MS = 10_000;
 
+/**
+ * `SpeechSynthesisResult.audioDuration` is populated only from the service's SessionEnd
+ * metadata and has no initialiser, so it reads back as `undefined` if SessionEnd never
+ * arrives. Guarding here keeps a NaN out of the database, where JSON.stringify would
+ * silently turn it into null and break the visemes/audio_duration_ms invariant.
+ */
 export function ticksToMs(ticks: number): number {
-  return Math.round(ticks / TICKS_PER_MS);
+  return Number.isFinite(ticks) ? Math.round(ticks / TICKS_PER_MS) : 0;
 }
 
-/** Tolerant parse of the `visemes` DB column, which is nullable and free-form TEXT. */
+function isVisemeEvent(value: unknown): value is VisemeEvent {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.offsetMs === 'number' && typeof v.visemeId === 'number';
+}
+
+/**
+ * Tolerant parse of the `visemes` DB column, which is nullable and free-form TEXT.
+ * Elements are validated individually, not just the outer array: a hand-edited column
+ * containing e.g. `[null]` would otherwise crash `visemeDeltas` on `visemes[i - 1].offsetMs`
+ * and, with no error boundary above it, blank the page.
+ */
 export function parseVisemes(json: string | null): VisemeEvent[] {
   if (!json) return [];
   try {
     const parsed: unknown = JSON.parse(json);
-    return Array.isArray(parsed) ? (parsed as VisemeEvent[]) : [];
+    return Array.isArray(parsed) ? parsed.filter(isVisemeEvent) : [];
   } catch {
     return [];
   }
