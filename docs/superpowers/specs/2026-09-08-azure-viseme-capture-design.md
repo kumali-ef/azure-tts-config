@@ -343,10 +343,20 @@ Verified against `microsoft-cognitiveservices-speech-sdk@1.51.0` source, not ass
    returns `audio` unchanged when `!hasHeader`; only RIFF/WAV formats carry a header). So
    chunks can be appended straight to the MediaSource sink with no slicing.
 
-3. **Vite bundling — non-issue.** `vite build` succeeds with no config changes; the SDK
-   was confirmed present in the emitted bundle. The package's `browser` field already maps
-   `ws`, `fs`, `net`, `tls`, `https-proxy-agent` etc. to `false`, which Vite honours. No
-   `optimizeDeps` entry or resolve alias needed. Cost: roughly +230 kB raw / +60 kB gzip.
+3. **Vite bundling — non-issue, but the SDK is lazy-loaded.** `vite build` succeeds with no
+   config changes. The package's `browser` field already maps `ws`, `fs`, `net`, `tls`,
+   `https-proxy-agent` etc. to `false`, which Vite honours, so no `optimizeDeps` entry or
+   resolve alias is needed. Presence in the output was confirmed with SDK-unique markers
+   (`SpeechSynthesisVisemeEventArgs`, `cognitiveservices/websocket`, `X-ConnectionId`) —
+   note that grepping for `SynthesizingAudioCompleted` is a **false positive**, because
+   `src/utils/code-generator.ts:40` emits that string in a Show Code template.
+
+   Measured cost of a static import: **372.66 kB → 761.76 kB raw (+389 kB, +104%)** and
+   **93.83 kB → 179.16 kB gzip (+85 kB, +91%)**, which also trips Vite's 500 kB chunk
+   warning. Because the capture toggle defaults to off, most sessions never need the SDK,
+   so `azure-viseme-tts.ts` loads it with a **dynamic `await import(...)`** inside
+   `synthesizeWithVisemes`. Vite code-splits it into its own chunk, the main bundle stays
+   at 372 kB, and only the first viseme synthesis pays a one-time chunk fetch.
 
 4. **`Audio16Khz128KBitRateMonoMp3` — exact match.** `AudioOutputFormat.js` maps it to
    `"audio-16khz-128kbitrate-mono-mp3"`, identical to the REST `X-Microsoft-OutputFormat`

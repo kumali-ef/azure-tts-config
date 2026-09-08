@@ -71,6 +71,8 @@ npm install microsoft-cognitiveservices-speech-sdk@1.51.0
 Run: `npm run build`
 Expected: `✓ built in <N>ms`, no TypeScript errors. (No config changes are needed — the package's `browser` field already stubs out its Node-only dependencies and Vite honours it.)
 
+The bundle should be **unchanged** at this point (~372 kB), because nothing imports the SDK yet. Task 8 loads it via a dynamic `import()` so it lands in its own lazy chunk rather than the main bundle.
+
 - [ ] **Step 3: Verify existing tests still pass**
 
 Run: `npm test`
@@ -927,7 +929,8 @@ git commit -m "feat: add capture-visemes toggle to Azure settings"
 Create `src/utils/azure-viseme-tts.ts`:
 
 ```ts
-import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
+// Type-only: erased at compile time, so it does NOT pull the SDK into the main bundle.
+import type { SpeechSynthesisResult } from 'microsoft-cognitiveservices-speech-sdk';
 import type { VisemeEvent } from './viseme-data';
 import { ticksToMs } from './viseme-data';
 import { createMp3Sink, isMediaSourceSupported } from './mp3-media-source';
@@ -951,6 +954,11 @@ export async function synthesizeWithVisemes(
   audioElement: HTMLAudioElement,
   opts: { deploymentId?: string; stream: boolean },
 ): Promise<VisemeSynthesisResult> {
+  // Loaded on demand: a static import adds ~389 kB raw / ~85 kB gzip to the main bundle,
+  // and the capture toggle defaults to off, so most sessions never need it. Vite
+  // code-splits this into its own chunk automatically.
+  const sdk = await import('microsoft-cognitiveservices-speech-sdk');
+
   const speechConfig = sdk.SpeechConfig.fromSubscription(key, region);
 
   // Mandatory, not cosmetic: the browser default is audio-24khz-48kbitrate-mono-mp3, which
@@ -992,7 +1000,7 @@ export async function synthesizeWithVisemes(
   };
 
   try {
-    const result = await new Promise<sdk.SpeechSynthesisResult>((resolve, reject) => {
+    const result = await new Promise<SpeechSynthesisResult>((resolve, reject) => {
       synthesizer.speakSsmlAsync(ssml, resolve, (e) => reject(new Error(e)));
     });
 
@@ -1030,10 +1038,24 @@ export async function synthesizeWithVisemes(
 Run: `npx tsc --noEmit -p tsconfig.app.json`
 Expected: no output, exit code 0.
 
-- [ ] **Step 3: Verify it still bundles**
+- [ ] **Step 3: Verify the SDK is code-split, not in the main bundle**
 
 Run: `npm run build`
-Expected: `✓ built in <N>ms`, no errors.
+Expected: `✓ built in <N>ms`, no errors, and **no** `(!) Some chunks are larger than 500 kB`
+warning. The output must list a **separate** SDK chunk, with the main `index-*.js` chunk
+still around 372 kB rather than ~762 kB.
+
+Then confirm the SDK really is in its own chunk and not the entry chunk:
+
+```bash
+grep -l "SpeechSynthesisVisemeEventArgs" dist/assets/*.js
+```
+
+Expected: this prints one file, and it is **not** the `index-*.js` entry chunk.
+
+Note: do not grep for `SynthesizingAudioCompleted` — `src/utils/code-generator.ts:40`
+emits that string inside a Show Code template, so it matches the main bundle regardless of
+whether the SDK is bundled.
 
 - [ ] **Step 4: Commit**
 

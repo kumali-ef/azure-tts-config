@@ -15,6 +15,7 @@
     "better-sqlite3": "^12.8.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "microsoft-cognitiveservices-speech-sdk": "^1.51.0",
     "multer": "^2.1.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
