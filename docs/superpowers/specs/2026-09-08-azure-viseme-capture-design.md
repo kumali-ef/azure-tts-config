@@ -78,18 +78,28 @@ Implementation notes:
 - `synthesizer.synthesizing` — the first fire stamps `ttfbMs`. When `opts.stream` is true,
   chunks are also appended to the MediaSource sink for progressive playback.
 - `speakSsmlAsync` wrapped in a Promise. If `result.reason !== ResultReason.SynthesizingAudioCompleted`,
-  reject with `SpeechSynthesisCancellationDetails.fromResult(result).errorDetails`.
+  throw `result.errorDetails`. (`errorDetails` is a getter on `SynthesisResult`, the base class of
+  `SpeechSynthesisResult`. There is no `SpeechSynthesisCancellationDetails` in this SDK's
+  synthesis path, so the result property is the correct source.)
 - `synthesizer.close()` in a `finally`.
 - `audioDurationMs = ticksToMs(result.audioDuration)`.
 
-Pure helpers extracted for testability (no SDK import needed to test them):
+### New: `src/utils/viseme-data.ts`
+
+The pure, SDK-free half of the logic lives in its own module so the tests never import the
+Speech SDK (which would drag browser globals into the Node-based vitest run):
 
 ```ts
+export interface VisemeEvent { offsetMs: number; visemeId: number }
 export function ticksToMs(ticks: number): number;
+export function parseVisemes(json: string | null): VisemeEvent[];
+export function visemeDeltas(visemes: VisemeEvent[]): (number | null)[];
 export function visemeTimelineMarks(
   visemes: VisemeEvent[], durationMs: number, width: number,
 ): { x: number; visemeId: number; offsetMs: number }[];
 ```
+
+`azure-viseme-tts.ts` imports `ticksToMs` and the `VisemeEvent` type from here.
 
 ### Refactor: `src/utils/mp3-media-source.ts`
 
@@ -181,9 +191,23 @@ The documented Azure viseme ID → phoneme-group map, 22 entries:
 
 An unknown ID falls back to the literal string `id N`.
 
-The module also groups the 22 IDs into six articulation families — silence, open vowels,
-close/rounded vowels, diphthongs, fricatives/sibilants, plosives/nasals — so the timeline
-uses a six-colour scale rather than 22 arbitrary hues.
+The module also groups the 22 IDs into **seven** articulation families so the timeline uses
+a seven-colour scale rather than 22 arbitrary hues. Seven rather than six because IDs 12
+(`h`), 13 (`ɹ`) and 14 (`l`) have no home in a vowel/fricative/plosive split; they are
+grouped as "glides & liquids" on the grounds that all three are visually open, unclosed
+mouth shapes.
+
+| Family | IDs | Colour |
+|---|---|---|
+| silence | 0 | `#cbd5e1` |
+| open vowels | 1, 2, 3, 5 | `#f59e0b` |
+| close / rounded vowels | 4, 6, 7, 8 | `#0ea5e9` |
+| diphthongs | 9, 10, 11 | `#ec4899` |
+| glides & liquids | 12, 13, 14 | `#8b5cf6` |
+| fricatives & sibilants | 15, 16, 17, 18 | `#10b981` |
+| plosives & nasals | 19, 20, 21 | `#ef4444` |
+
+An ID outside 0–21 has no family and renders in `#64748b`.
 
 ### `src/utils/storage.ts` and `src/hooks/useAzureSettings.ts`
 
@@ -292,19 +316,40 @@ checklist instead:
 - Side-by-side comparison of multiple recordings' timelines.
 - Viseme capture for any provider other than Azure.
 
-## Risks to verify during implementation
+## Risks — all resolved before planning
 
-Each has a known fallback, so none blocks the design.
+Verified against `microsoft-cognitiveservices-speech-sdk@1.51.0` source, not assumed.
 
-1. **`new SpeechSynthesizer(cfg, null)` suppressing default speaker output.** If it does
-   not, audio double-plays against `audioRef`. Fallback: use `SpeakerAudioDestination` via
-   `AudioConfig.fromSpeakerOutput` and take TTFB from `player.onAudioStart` instead of the
-   `audioRef` element on this path.
-2. **Whether `synthesizing`'s `e.result.audioData` is incremental or cumulative.** Decides
-   whether `createMp3Sink.append` can take it directly. If cumulative, slice against a
-   running offset before appending.
-3. **Vite bundling of `microsoft-cognitiveservices-speech-sdk`.** The package ships both
-   Node and browser builds; may need `optimizeDeps.include` or a resolve alias to the
-   browser bundle.
-4. **`Audio16Khz128KBitRateMonoMp3` enum name.** Must correspond to the REST format string
-   `audio-16khz-128kbitrate-mono-mp3` so saved files stay valid `.mp3`.
+1. **`new SpeechSynthesizer(cfg, null)` suppresses default speaker output — confirmed.**
+   `distrib/lib/src/sdk/SpeechSynthesizer.js:28-33`:
+   ```js
+   if (audioConfig !== null) {
+       if (audioConfig === undefined) {
+           this.audioConfig = (typeof window === "undefined")
+               ? undefined : AudioConfig.fromDefaultSpeakerOutput();
+       } else { this.audioConfig = audioConfig; }
+   }
+   ```
+   Passing `undefined` (i.e. omitting the argument) would attach the default speaker and
+   double-play against `audioRef`. `null` leaves `audioConfig` unset. The `null` is also
+   explicitly in the public type: `constructor(speechConfig, audioConfig?: AudioConfig | null)`.
+   `result.audioData` is still populated, because audio accumulates on the synthesis turn
+   independently of the speaker destination.
+
+2. **`synthesizing`'s `e.result.audioData` is the incremental chunk — confirmed.**
+   `SynthesisAdapterBase.js:227` calls `onSynthesizing(connectionMessage.binaryBody)`, the
+   raw per-message WebSocket payload. `SpeechSynthesisAdapter.js:26` wraps it with
+   `audioOutputFormat.addHeader(audio)`, which is a no-op for MP3 (`AudioOutputFormat.js:183`
+   returns `audio` unchanged when `!hasHeader`; only RIFF/WAV formats carry a header). So
+   chunks can be appended straight to the MediaSource sink with no slicing.
+
+3. **Vite bundling — non-issue.** `vite build` succeeds with no config changes; the SDK
+   was confirmed present in the emitted bundle. The package's `browser` field already maps
+   `ws`, `fs`, `net`, `tls`, `https-proxy-agent` etc. to `false`, which Vite honours. No
+   `optimizeDeps` entry or resolve alias needed. Cost: roughly +230 kB raw / +60 kB gzip.
+
+4. **`Audio16Khz128KBitRateMonoMp3` — exact match.** `AudioOutputFormat.js` maps it to
+   `"audio-16khz-128kbitrate-mono-mp3"`, identical to the REST `X-Microsoft-OutputFormat`
+   header and the stored `output_format`. **Setting it explicitly is mandatory, not
+   cosmetic:** `getDefaultOutputFormat()` returns `audio-24khz-48kbitrate-mono-mp3` in a
+   browser, so omitting it would silently change the bitrate of SDK-path recordings.
