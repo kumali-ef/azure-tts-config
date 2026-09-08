@@ -54,6 +54,8 @@ export interface Recording {
   api_response_time_ms: number | null;
   stream_duration_ms: number | null;
   deployment_id: string | null;
+  visemes: string | null;
+  audio_duration_ms: number | null;
   created_at: string;
   label: string | null;
 }

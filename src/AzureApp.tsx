@@ -6,6 +6,8 @@ import { useVoices } from './hooks/useVoices';
 import { useRecordings } from './hooks/useRecordings';
 import { buildSsml } from './utils/ssml';
 import { synthesizeSpeech, synthesizeSpeechStreaming } from './utils/azure-tts';
+import { synthesizeWithVisemes } from './utils/azure-viseme-tts';
+import type { VisemeEvent } from './utils/viseme-data';
 import {
   getStoredDeploymentId, setStoredDeploymentId,
   getStoredCustomVoiceName, setStoredCustomVoiceName,
@@ -22,6 +24,7 @@ import { TextInput } from './components/TextInput';
 import { ActionButtons } from './components/ActionButtons';
 import { ShowCodeModal } from './components/ShowCodeModal';
 import { RecordingsList } from './components/RecordingsList';
+import { VisemeModal } from './components/VisemeModal';
 
 function recordingToConfig(rec: Recording): TtsConfig {
   const breakConfig = rec.break_config ? JSON.parse(rec.break_config) : null;
@@ -45,7 +48,7 @@ function recordingToConfig(rec: Recording): TtsConfig {
 }
 
 export function AzureApp() {
-  const { key, setKey, region, setRegion, isConfigured } = useAzureSettings();
+  const { key, setKey, region, setRegion, captureVisemes, setCaptureVisemes, isConfigured } = useAzureSettings();
   const {
     voices, allVoices, languages, loading: voicesLoading, error: voicesError,
     searchQuery, setSearchQuery, languageFilter, setLanguageFilter, retry,
@@ -57,7 +60,9 @@ export function AzureApp() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [codeModalConfig, setCodeModalConfig] = useState<TtsConfig | null>(null);
+  const [visemeModalRec, setVisemeModalRec] = useState<Recording | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Custom voice state (persisted in localStorage)
   const [customVoiceName, setCustomVoiceName] = useState(getStoredCustomVoiceName);
@@ -65,6 +70,10 @@ export function AzureApp() {
 
   useEffect(() => { setStoredCustomVoiceName(customVoiceName); }, [customVoiceName]);
   useEffect(() => { setStoredDeploymentId(customDeploymentId); }, [customDeploymentId]);
+
+  // The notice only ever describes capture mode, so drop it when capture is switched off
+  // rather than leaving a banner that explains a mode no longer in effect.
+  useEffect(() => { if (!captureVisemes) setNotice(null); }, [captureVisemes]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -97,21 +106,43 @@ export function AzureApp() {
 
     if (!effectiveVoiceName) return;
     if (isCustom && !customDeploymentId) return;
+    if (!audioRef.current) return;
 
     setIsSynthesizing(true);
     setError(null);
+    setNotice(null);
     try {
       const synthConfig = { ...config, voiceName: effectiveVoiceName };
       const ssml = buildSsml(synthConfig);
-      const startTime = performance.now();
-      const audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
-      const apiResponseTimeMs = Math.round(performance.now() - startTime);
-      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) {
-        audioRef.current.src = url;
+
+      let audioBuffer: ArrayBuffer;
+      let apiResponseTimeMs: number;
+      let visemes: VisemeEvent[] = [];
+      let audioDurationMs: number | null = null;
+
+      if (captureVisemes) {
+        const result = await synthesizeWithVisemes(key, region, ssml, audioRef.current, {
+          deploymentId: effectiveDeploymentId,
+          stream: false,
+        });
+        audioBuffer = result.buffer;
+        apiResponseTimeMs = result.totalMs;
+        visemes = result.visemes;
+        audioDurationMs = result.audioDurationMs;
+        if (visemes.length === 0) {
+          setNotice('Synthesis succeeded but no viseme events were received for this voice.');
+        }
+      } else {
+        const startTime = performance.now();
+        audioBuffer = await synthesizeSpeech(key, region, ssml, effectiveDeploymentId);
+        apiResponseTimeMs = Math.round(performance.now() - startTime);
+        audioRef.current.src = URL.createObjectURL(
+          new Blob([audioBuffer], { type: 'audio/mpeg' }),
+        );
         audioRef.current.play();
       }
+
+      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       // Auto-save after successful synthesis
       await saveRecording(blob, {
         voice_name: effectiveVoiceName,
@@ -131,6 +162,12 @@ export function AzureApp() {
         ssml,
         api_response_time_ms: apiResponseTimeMs,
         deployment_id: isCustom ? customDeploymentId : null,
+        visemes: visemes.length > 0 ? JSON.stringify(visemes) : null,
+        // Written whenever the SDK path ran, even if it yielded no viseme events, so
+        // `audio_duration_ms != null` reliably marks a WebSocket-path recording. Without
+        // that, a capture-mode row with zero visemes is indistinguishable from a REST row
+        // while carrying SDK-path timings — which would quietly corrupt TTFB comparisons.
+        audio_duration_ms: audioDurationMs,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synthesis failed');
@@ -152,12 +189,39 @@ export function AzureApp() {
 
     setIsStreaming(true);
     setError(null);
+    setNotice(null);
     try {
       const synthConfig = { ...config, voiceName: effectiveVoiceName };
       const ssml = buildSsml(synthConfig);
-      const { ttfbMs, totalMs, buffer } = await synthesizeSpeechStreaming(
-        key, region, ssml, audioRef.current, effectiveDeploymentId
-      );
+
+      let buffer: ArrayBuffer;
+      let ttfbMs: number;
+      let totalMs: number;
+      let visemes: VisemeEvent[] = [];
+      let audioDurationMs: number | null = null;
+
+      if (captureVisemes) {
+        const result = await synthesizeWithVisemes(key, region, ssml, audioRef.current, {
+          deploymentId: effectiveDeploymentId,
+          stream: true,
+        });
+        buffer = result.buffer;
+        ttfbMs = result.ttfbMs;
+        totalMs = result.totalMs;
+        visemes = result.visemes;
+        audioDurationMs = result.audioDurationMs;
+        if (visemes.length === 0) {
+          setNotice('Synthesis succeeded but no viseme events were received for this voice.');
+        }
+      } else {
+        const result = await synthesizeSpeechStreaming(
+          key, region, ssml, audioRef.current, effectiveDeploymentId
+        );
+        buffer = result.buffer;
+        ttfbMs = result.ttfbMs;
+        totalMs = result.totalMs;
+      }
+
       const blob = new Blob([buffer], { type: 'audio/mpeg' });
       await saveRecording(blob, {
         voice_name: effectiveVoiceName,
@@ -178,6 +242,12 @@ export function AzureApp() {
         api_response_time_ms: ttfbMs,
         stream_duration_ms: totalMs,
         deployment_id: isCustom ? customDeploymentId : null,
+        visemes: visemes.length > 0 ? JSON.stringify(visemes) : null,
+        // Written whenever the SDK path ran, even if it yielded no viseme events, so
+        // `audio_duration_ms != null` reliably marks a WebSocket-path recording. Without
+        // that, a capture-mode row with zero visemes is indistinguishable from a REST row
+        // while carrying SDK-path timings — which would quietly corrupt TTFB comparisons.
+        audio_duration_ms: audioDurationMs,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Streaming synthesis failed');
@@ -237,6 +307,8 @@ export function AzureApp() {
               region={region}
               onKeyChange={setKey}
               onRegionChange={setRegion}
+              captureVisemes={captureVisemes}
+              onCaptureVisemesChange={setCaptureVisemes}
             />
           </Accordion>
 
@@ -325,6 +397,12 @@ export function AzureApp() {
             </div>
           )}
 
+          {notice && (
+            <div className="mx-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-md text-sm">
+              {notice}
+            </div>
+          )}
+
           {!isConfigured && (
             <div className="mx-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-md text-sm">
               Enter your Azure API key and region to get started.
@@ -343,6 +421,7 @@ export function AzureApp() {
             onDelete={deleteRecording}
             onShowCode={(rec) => setCodeModalConfig(recordingToConfig(rec))}
             onLoad={handleLoadRecording}
+            onShowVisemes={setVisemeModalRec}
           />
         </div>
       </div>
@@ -353,6 +432,10 @@ export function AzureApp() {
       {/* Show Code Modal */}
       {codeModalConfig && (
         <ShowCodeModal config={codeModalConfig} onClose={() => setCodeModalConfig(null)} />
+      )}
+
+      {visemeModalRec && (
+        <VisemeModal recording={visemeModalRec} onClose={() => setVisemeModalRec(null)} />
       )}
     </>
   );

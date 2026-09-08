@@ -51,6 +51,8 @@ router.post('/recordings', upload.single('audio'), (req: Request, res: Response)
       api_response_time_ms: config.api_response_time_ms ?? null,
       stream_duration_ms: config.stream_duration_ms ?? null,
       deployment_id: config.deployment_id || null,
+      visemes: config.visemes || null,
+      audio_duration_ms: config.audio_duration_ms ?? null,
       label: config.label || null,
     });
 

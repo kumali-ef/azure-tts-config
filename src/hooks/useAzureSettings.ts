@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
-import { getStoredKey, setStoredKey, getStoredRegion, setStoredRegion } from '../utils/storage';
+import {
+  getStoredKey, setStoredKey,
+  getStoredRegion, setStoredRegion,
+  getStoredCaptureVisemes, setStoredCaptureVisemes,
+} from '../utils/storage';
 
 export function useAzureSettings() {
   const [key, setKey] = useState(getStoredKey);
   const [region, setRegion] = useState(getStoredRegion);
+  const [captureVisemes, setCaptureVisemes] = useState(getStoredCaptureVisemes);
 
   useEffect(() => {
     setStoredKey(key);
@@ -13,7 +18,11 @@ export function useAzureSettings() {
     setStoredRegion(region);
   }, [region]);
 
+  useEffect(() => {
+    setStoredCaptureVisemes(captureVisemes);
+  }, [captureVisemes]);
+
   const isConfigured = key.length > 0 && region.length > 0;
 
-  return { key, setKey, region, setRegion, isConfigured };
+  return { key, setKey, region, setRegion, captureVisemes, setCaptureVisemes, isConfigured };
 }
