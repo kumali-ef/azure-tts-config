@@ -1,4 +1,5 @@
 import type { AzureVoice } from '../types';
+import { createMp3Sink, isMediaSourceSupported } from './mp3-media-source';
 
 export async function fetchVoices(key: string, region: string): Promise<AzureVoice[]> {
   const url = `https://${region}.tts.speech.microsoft.com/cognitiveservices/voices/list`;
@@ -79,50 +80,21 @@ export async function synthesizeSpeechStreaming(
   let ttfbMs = 0;
   let firstChunk = true;
 
-  // Try MediaSource for streaming playback
-  if (typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported('audio/mpeg')) {
-    const mediaSource = new MediaSource();
-    audioElement.src = URL.createObjectURL(mediaSource);
-
-    await new Promise<void>((resolve, reject) => {
-      mediaSource.addEventListener('sourceopen', async () => {
-        const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
-        const pendingChunks: Uint8Array[] = [];
-        let streamDone = false;
-
-        const appendNext = () => {
-          if (pendingChunks.length > 0 && !sourceBuffer.updating) {
-            sourceBuffer.appendBuffer(pendingChunks.shift()!.buffer as ArrayBuffer);
-          } else if (streamDone && pendingChunks.length === 0 && !sourceBuffer.updating) {
-            if (mediaSource.readyState === 'open') {
-              mediaSource.endOfStream();
-            }
-            resolve();
-          }
-        };
-
-        sourceBuffer.addEventListener('updateend', appendNext);
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (firstChunk) {
-              ttfbMs = Math.round(performance.now() - startTime);
-              firstChunk = false;
-              audioElement.play();
-            }
-            chunks.push(value);
-            pendingChunks.push(value);
-            appendNext();
-          }
-          streamDone = true;
-          appendNext();
-        } catch (err) {
-          reject(err);
-        }
-      }, { once: true });
-    });
+  if (isMediaSourceSupported()) {
+    const sink = createMp3Sink(audioElement);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (firstChunk) {
+        ttfbMs = Math.round(performance.now() - startTime);
+        firstChunk = false;
+        audioElement.play();
+      }
+      chunks.push(value);
+      sink.append(value);
+    }
+    sink.end();
+    await sink.done;
   } else {
     // Fallback: buffer everything, then play
     while (true) {
