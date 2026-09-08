@@ -149,9 +149,17 @@ audio_duration_ms  INTEGER   -- from result.audioDuration; timeline axis length
 
 Threaded through `RecordingRow` and `insertStmt` (column list and `VALUES`).
 
-Both columns are written only by the SDK path, and always together: a row either has both
-(capture on, events received) or neither (capture off, or zero events received). The modal
-therefore never has to handle a non-null `visemes` with a null `audio_duration_ms`.
+Both columns are written only by the SDK path, but **not** together. The invariant is:
+
+- `audio_duration_ms != null` ⟺ the SDK/WebSocket path ran
+- `visemes != null` ⟺ the SDK path ran **and** at least one viseme event arrived
+
+So `visemes != null` implies `audio_duration_ms != null`, and the modal never has to handle
+the reverse. The asymmetry is deliberate. An earlier draft gated both on
+`visemes.length > 0`, which meant a capture-mode run that yielded no events was
+indistinguishable from a REST row while still carrying WebSocket-path timings — silently
+corrupting the TTFB comparisons this tool exists to make. `audio_duration_ms` is therefore
+the transport marker, surfaced in the recordings list as an `SDK` tag.
 
 ### `server/routes.ts`
 
@@ -306,10 +314,24 @@ checklist instead:
 
 ## Explicitly out of scope
 
-- **Show Code / `code-generator.ts` (deferred, to be done later).** With capture on,
-  `Show Code` still emits REST `fetch` code, which will not produce viseme events. Teaching
-  the generator to emit Speech SDK code is separate work and is deliberately not part of
-  this change.
+- **Show Code / `code-generator.ts` (deferred, to be done later).** `Show Code` does not
+  mention visemes regardless of the toggle.
+
+  **Correction:** an earlier draft of this spec claimed the generators emit REST `fetch`
+  code. They do not. `code-generator.ts` has exactly two generators — `generatePythonCode`
+  (emitting `azure.cognitiveservices.speech`) and `generateNodeCode` (emitting
+  `require("microsoft-cognitiveservices-speech-sdk")`) — and `ShowCodeModal` offers
+  `json | python | nodejs | ssml`. There is no REST tab. So the generated examples already
+  use the same transport as the capture path; what they lack is a
+  `synthesizer.visemeReceived = …` assignment, roughly three lines per generator behind the
+  existing flag. The gap is much cheaper to close than first assumed.
+
+  Related pre-existing inconsistency, outside this change but now worth recording: neither
+  generator sets `speechSynthesisOutputFormat`, so copied example code produces
+  `audio-24khz-48kbitrate-mono-mp3` while the recording is labelled
+  `audio-16khz-128kbitrate-mono-mp3`. That directly contradicts the "mandatory, not
+  cosmetic" comment this change adds to `azure-viseme-tts.ts`. Worth fixing alongside the
+  viseme lines.
 - Lip-sync or avatar animation preview.
 - The `<mstts:viseme>` SSML control and its `animation` payloads (`redlips_front`,
   `FacialExpression`).

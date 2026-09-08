@@ -71,6 +71,10 @@ export function AzureApp() {
   useEffect(() => { setStoredCustomVoiceName(customVoiceName); }, [customVoiceName]);
   useEffect(() => { setStoredDeploymentId(customDeploymentId); }, [customDeploymentId]);
 
+  // The notice only ever describes capture mode, so drop it when capture is switched off
+  // rather than leaving a banner that explains a mode no longer in effect.
+  useEffect(() => { if (!captureVisemes) setNotice(null); }, [captureVisemes]);
+
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const updateConfig = useCallback((updates: Partial<TtsConfig>) => {
@@ -102,12 +106,12 @@ export function AzureApp() {
 
     if (!effectiveVoiceName) return;
     if (isCustom && !customDeploymentId) return;
+    if (!audioRef.current) return;
 
     setIsSynthesizing(true);
     setError(null);
     setNotice(null);
     try {
-      if (!audioRef.current) return;
       const synthConfig = { ...config, voiceName: effectiveVoiceName };
       const ssml = buildSsml(synthConfig);
 
@@ -159,7 +163,11 @@ export function AzureApp() {
         api_response_time_ms: apiResponseTimeMs,
         deployment_id: isCustom ? customDeploymentId : null,
         visemes: visemes.length > 0 ? JSON.stringify(visemes) : null,
-        audio_duration_ms: visemes.length > 0 ? audioDurationMs : null,
+        // Written whenever the SDK path ran, even if it yielded no viseme events, so
+        // `audio_duration_ms != null` reliably marks a WebSocket-path recording. Without
+        // that, a capture-mode row with zero visemes is indistinguishable from a REST row
+        // while carrying SDK-path timings — which would quietly corrupt TTFB comparisons.
+        audio_duration_ms: audioDurationMs,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synthesis failed');
@@ -235,7 +243,11 @@ export function AzureApp() {
         stream_duration_ms: totalMs,
         deployment_id: isCustom ? customDeploymentId : null,
         visemes: visemes.length > 0 ? JSON.stringify(visemes) : null,
-        audio_duration_ms: visemes.length > 0 ? audioDurationMs : null,
+        // Written whenever the SDK path ran, even if it yielded no viseme events, so
+        // `audio_duration_ms != null` reliably marks a WebSocket-path recording. Without
+        // that, a capture-mode row with zero visemes is indistinguishable from a REST row
+        // while carrying SDK-path timings — which would quietly corrupt TTFB comparisons.
+        audio_duration_ms: audioDurationMs,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Streaming synthesis failed');

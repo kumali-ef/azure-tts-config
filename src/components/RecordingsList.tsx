@@ -159,6 +159,10 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDownload,
                   {rec.volume !== 'medium' && <Tag label={`vol: ${rec.volume}`} />}
                   {rec.style && <Tag label={rec.style} />}
                   {rec.emphasis && <Tag label={`emphasis: ${rec.emphasis}`} />}
+                  {/* Marks the WebSocket/SDK transport. Its timings are not directly
+                      comparable with REST rows, and a capture-mode run that yielded no
+                      visemes would otherwise be indistinguishable from one. */}
+                  {rec.audio_duration_ms != null && <Tag label="SDK" />}
                   {visemeCounts.has(rec.id) && <Tag label={`visemes: ${visemeCounts.get(rec.id)}`} />}
                 </div>
                 {rec.label && (

@@ -45,6 +45,8 @@ export function createMp3Sink(audioElement: HTMLAudioElement): Mp3Sink {
     if (!sourceBuffer || settled) return;
     try {
       if (pending.length > 0 && !sourceBuffer.updating) {
+        // Safe to append `.buffer` directly: `append` guarantees everything in `pending`
+        // spans its whole backing buffer.
         sourceBuffer.appendBuffer(pending.shift()!.buffer as ArrayBuffer);
       } else if (streamDone && pending.length === 0 && !sourceBuffer.updating) {
         if (mediaSource.readyState === 'open') mediaSource.endOfStream();
@@ -74,7 +76,14 @@ export function createMp3Sink(audioElement: HTMLAudioElement): Mp3Sink {
 
   return {
     append(chunk: Uint8Array) {
-      pending.push(chunk);
+      // Normalize to a view spanning its entire backing buffer, because `pump` appends
+      // `.buffer` and that ignores a view's byteOffset/length. Without this, handing in a
+      // `subarray()` would append the whole backing buffer and garble playback with no
+      // error. Both current callers already pass exact-length views, so this is the
+      // zero-copy path for them; it only copies for a partial view.
+      const spansWholeBuffer =
+        chunk.byteOffset === 0 && chunk.byteLength === chunk.buffer.byteLength;
+      pending.push(spansWholeBuffer ? chunk : chunk.slice());
       pump();
     },
     end() {

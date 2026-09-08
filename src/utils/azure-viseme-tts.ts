@@ -98,5 +98,6 @@ export async function synthesizeWithVisemes(
     };
   } finally {
     synthesizer.close();
+    speechConfig.close();
   }
 }
