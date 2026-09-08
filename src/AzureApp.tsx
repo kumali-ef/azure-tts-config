@@ -24,6 +24,7 @@ import { TextInput } from './components/TextInput';
 import { ActionButtons } from './components/ActionButtons';
 import { ShowCodeModal } from './components/ShowCodeModal';
 import { RecordingsList } from './components/RecordingsList';
+import { VisemeModal } from './components/VisemeModal';
 
 function recordingToConfig(rec: Recording): TtsConfig {
   const breakConfig = rec.break_config ? JSON.parse(rec.break_config) : null;
@@ -59,6 +60,7 @@ export function AzureApp() {
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [codeModalConfig, setCodeModalConfig] = useState<TtsConfig | null>(null);
+  const [visemeModalRec, setVisemeModalRec] = useState<Recording | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -407,6 +409,7 @@ export function AzureApp() {
             onDelete={deleteRecording}
             onShowCode={(rec) => setCodeModalConfig(recordingToConfig(rec))}
             onLoad={handleLoadRecording}
+            onShowVisemes={setVisemeModalRec}
           />
         </div>
       </div>
@@ -417,6 +420,10 @@ export function AzureApp() {
       {/* Show Code Modal */}
       {codeModalConfig && (
         <ShowCodeModal config={codeModalConfig} onClose={() => setCodeModalConfig(null)} />
+      )}
+
+      {visemeModalRec && (
+        <VisemeModal recording={visemeModalRec} onClose={() => setVisemeModalRec(null)} />
       )}
     </>
   );

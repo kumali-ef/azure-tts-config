@@ -26,9 +26,10 @@ interface RecordingsListProps {
   onDelete: (id: string) => void;
   onShowCode: (recording: Recording) => void;
   onLoad: (recording: Recording) => void;
+  onShowVisemes: (recording: Recording) => void;
 }
 
-export function RecordingsList({ recordings, loading, error, onPlay, onDownload, onDelete, onShowCode, onLoad }: RecordingsListProps) {
+export function RecordingsList({ recordings, loading, error, onPlay, onDownload, onDelete, onShowCode, onLoad, onShowVisemes }: RecordingsListProps) {
   const [filters, setFilters] = useState<RecordingFilters>(EMPTY_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -66,6 +67,21 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDownload,
       return true;
     });
   }, [recordings, filters]);
+
+  // Parse each recording's viseme JSON once per list change, not inside the render loop.
+  const visemeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of recordings) {
+      if (!r.visemes) continue;
+      try {
+        const parsed: unknown = JSON.parse(r.visemes);
+        if (Array.isArray(parsed)) counts.set(r.id, parsed.length);
+      } catch {
+        // A malformed value just means no tag for this row.
+      }
+    }
+    return counts;
+  }, [recordings]);
 
   const activeCount = Object.values(filters).filter(Boolean).length;
 
@@ -143,6 +159,7 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDownload,
                   {rec.volume !== 'medium' && <Tag label={`vol: ${rec.volume}`} />}
                   {rec.style && <Tag label={rec.style} />}
                   {rec.emphasis && <Tag label={`emphasis: ${rec.emphasis}`} />}
+                  {visemeCounts.has(rec.id) && <Tag label={`visemes: ${visemeCounts.get(rec.id)}`} />}
                 </div>
                 {rec.label && (
                   <p className="text-xs text-blue-600 mt-1">{rec.label}</p>
@@ -183,6 +200,13 @@ export function RecordingsList({ recordings, loading, error, onPlay, onDownload,
                   className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
                   title="Show config JSON"
                 >{'{}'}</button>
+                {rec.visemes && (
+                  <button
+                    onClick={() => onShowVisemes(rec)}
+                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                    title="Show visemes"
+                  >〰</button>
+                )}
               </div>
             </div>
           </div>
