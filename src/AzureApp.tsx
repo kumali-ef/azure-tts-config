@@ -45,7 +45,7 @@ function recordingToConfig(rec: Recording): TtsConfig {
 }
 
 export function AzureApp() {
-  const { key, setKey, region, setRegion, isConfigured } = useAzureSettings();
+  const { key, setKey, region, setRegion, captureVisemes, setCaptureVisemes, isConfigured } = useAzureSettings();
   const {
     voices, allVoices, languages, loading: voicesLoading, error: voicesError,
     searchQuery, setSearchQuery, languageFilter, setLanguageFilter, retry,
@@ -237,6 +237,8 @@ export function AzureApp() {
               region={region}
               onKeyChange={setKey}
               onRegionChange={setRegion}
+              captureVisemes={captureVisemes}
+              onCaptureVisemesChange={setCaptureVisemes}
             />
           </Accordion>
 

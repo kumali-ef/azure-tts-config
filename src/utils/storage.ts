@@ -2,6 +2,7 @@ const AZURE_KEY_STORAGE = 'azure-tts-key';
 const AZURE_REGION_STORAGE = 'azure-tts-region';
 const CUSTOM_DEPLOYMENT_ID_STORAGE = 'azure-tts-custom-deployment-id';
 const CUSTOM_VOICE_NAME_STORAGE = 'azure-tts-custom-voice-name';
+const CAPTURE_VISEMES_STORAGE = 'azure-tts-capture-visemes';
 
 export function getStoredKey(): string {
   return localStorage.getItem(AZURE_KEY_STORAGE) || '';
@@ -33,6 +34,14 @@ export function getStoredCustomVoiceName(): string {
 
 export function setStoredCustomVoiceName(name: string): void {
   localStorage.setItem(CUSTOM_VOICE_NAME_STORAGE, name);
+}
+
+export function getStoredCaptureVisemes(): boolean {
+  return localStorage.getItem(CAPTURE_VISEMES_STORAGE) === 'true';
+}
+
+export function setStoredCaptureVisemes(enabled: boolean): void {
+  localStorage.setItem(CAPTURE_VISEMES_STORAGE, String(enabled));
 }
 
 export function sanitizeFilename(name: string): string {
