@@ -35,6 +35,12 @@ export function createMp3Sink(audioElement: HTMLAudioElement): Mp3Sink {
     rejectDone = reject;
   });
 
+  // A caller that aborts mid-stream (say, a network error in its read loop) never reaches
+  // `await sink.done`, leaving it unobserved. Mark it observed here so a late appendBuffer
+  // failure cannot surface as an unhandled rejection. This does not weaken the contract:
+  // `.catch()` derives a new promise, so `await sink.done` still rejects as normal.
+  void done.catch(() => {});
+
   const pump = () => {
     if (!sourceBuffer || settled) return;
     try {
